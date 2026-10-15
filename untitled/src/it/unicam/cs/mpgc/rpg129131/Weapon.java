@@ -12,9 +12,7 @@ public abstract class Weapon implements Item {
         }
 
         if (!Double.isFinite(multiplier) || multiplier <= 0) {
-            throw new IllegalArgumentException(
-                    "Il moltiplicatore deve essere positivo e finito"
-            );
+            throw new IllegalArgumentException("Il moltiplicatore deve essere positivo e finito");
         }
 
         this.name = name;
