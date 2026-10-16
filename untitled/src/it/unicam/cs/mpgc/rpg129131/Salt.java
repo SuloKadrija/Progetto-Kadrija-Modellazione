@@ -1,6 +1,7 @@
 package it.unicam.cs.mpgc.rpg129131;
 
-public class Salt extends Weapon {
+public class Salt implements Item {
 
-    public Salt() { super("Sale", 1.1); }
+    @Override
+    public String getName() { return "Sale"; }
 }
