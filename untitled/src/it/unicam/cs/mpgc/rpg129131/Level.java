@@ -20,8 +20,10 @@ public class Level {
                 throw new IllegalArgumentException("La lista non può contenere incontri null.");
             }
         }
+
         this.number = number;
-        this.encounters = new ArrayList<>(encounters); }
+        this.encounters = new ArrayList<>(encounters);
+    }
 
     public LevelNumber getNumber() {
         return number;
@@ -36,5 +38,6 @@ public class Level {
             if (!encounter.isCompleted()) {
                 return false; }
         }
-        return true; }
+        return true;
+    }
 }

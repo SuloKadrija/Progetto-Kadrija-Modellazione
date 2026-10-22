@@ -20,6 +20,7 @@ public class CombatService {
         if (!hero.getInventory().contains(weapon)) {
             throw new IllegalStateException("Il personaggio non possiede quest'arma.");
         }
+
         int damage = calculateDamage(hero, weapon, enemy);
         enemy.takeDamage(damage);
         return damage;

@@ -17,7 +17,8 @@ public class GameState {
 
         this.party = party;
         this.currentLevel = initialLevel;
-        this.currentEncounterIndex = 0; }
+        this.currentEncounterIndex = 0;
+    }
 
     public Party getParty() {
         return party;
