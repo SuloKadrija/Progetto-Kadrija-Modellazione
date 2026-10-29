@@ -1,7 +1,11 @@
 package it.unicam.cs.mpgc.rpg129131;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class GameState {
 
+    private final List<Level> levels;
     private final Party party;
     private Level currentLevel;
     private int currentEncounterIndex;
