@@ -5,7 +5,7 @@ public enum EnemyType {
     VAMPIRE,
     WENDIGO,
     DEMON,
-    DEMONYELLOWEYES,
+    YELLOW_EYED_DEMON,
     LUCIFER,
     LEVIATHAN,
     ANGEL,
