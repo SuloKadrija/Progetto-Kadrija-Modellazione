@@ -1,7 +1,15 @@
 package it.unicam.cs.mpgc.rpg129131;
 
-public class Salt implements Item {
+import java.util.Map;
 
-    @Override
-    public String getName() { return "Sale"; }
+public class Salt extends Weapon {
+
+    public Salt() {
+        super("Sale", 1.5, Map.of(
+                        EnemyType.GHOST, 2.0,
+                        EnemyType.VAMPIRE, 0.5,
+                        EnemyType.WENDIGO, 0.5
+                )
+        );
+    }
 }
