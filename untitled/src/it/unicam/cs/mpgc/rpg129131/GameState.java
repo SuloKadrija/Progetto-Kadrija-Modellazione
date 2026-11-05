@@ -6,30 +6,31 @@ import java.util.List;
 public class GameState {
 
     private final List<Level> levels;
-    private final Party party;
-    private Level currentLevel;
+    private int currentLevelIndex;
     private int currentEncounterIndex;
 
-    public GameState(Party party, Level initialLevel) {
-        if (party == null) {
-            throw new IllegalArgumentException( "Il gruppo non può essere null." );
+    public GameState(List<Level> levels) {
+        if (levels == null || levels.isEmpty()) {
+            throw new IllegalArgumentException("La lista dei livelli non può essere null o vuota.");
         }
 
-        if (initialLevel == null) {
-            throw new IllegalArgumentException( "Il livello iniziale non può essere null." );
+        for (Level level : levels) {
+            if (level == null) {
+                throw new IllegalArgumentException("La lista non può contenere livelli null.");
+            }
         }
 
-        this.party = party;
-        this.currentLevel = initialLevel;
+        this.levels = new ArrayList<>(levels);
+        this.currentLevelIndex = 0;
         this.currentEncounterIndex = 0;
     }
 
-    public Party getParty() {
-        return party;
+    public Level getCurrentLevel() {
+        return levels.get(currentLevelIndex);
     }
 
-    public Level getCurrentLevel() {
-        return currentLevel;
+    public int getCurrentLevelIndex() {
+        return currentLevelIndex;
     }
 
     public int getCurrentEncounterIndex() {
@@ -37,37 +38,80 @@ public class GameState {
     }
 
     public Encounter getCurrentEncounter() {
-        if (isGameOver() || currentLevel.isCompleted()) {
+        if (isGameCompleted()) {
             return null;
         }
-        return currentLevel.getEncounters().get(currentEncounterIndex);
+
+        return getCurrentLevel()
+                .getEncounters()
+                .get(currentEncounterIndex);
+    }
+
+    public Party getCurrentParty() {
+        Encounter encounter = getCurrentEncounter();
+
+        if (encounter == null) {
+            return null;
+        }
+
+        return encounter.getParty();
     }
 
     public boolean isGameOver() {
+        Party party = getCurrentParty();
+
+        if (party == null) {
+            return false;
+        }
+
         return !party.hasLivingMembers();
     }
 
     public boolean isLevelCompleted() {
-        return currentLevel.isCompleted();
+        return getCurrentLevel().isCompleted();
     }
 
     public boolean isGameCompleted() {
-        return isLevelCompleted();
+        return currentLevelIndex == levels.size() - 1
+                && getCurrentLevel().isCompleted();
     }
 
     public boolean advanceEncounter() {
-        if (isGameOver() || isLevelCompleted()) {
+        if (isGameOver() || isGameCompleted()) {
             return false;
         }
 
-        Encounter encounter = getCurrentEncounter();
-        if (encounter == null || !encounter.isCompleted()) {
+        Encounter currentEncounter = getCurrentEncounter();
+
+        if (currentEncounter == null || !currentEncounter.isCompleted()) {
             return false;
         }
-        if (currentEncounterIndex < currentLevel.getEncounters().size() - 1) {
+
+        List<Encounter> encounters = getCurrentLevel().getEncounters();
+
+        if (currentEncounterIndex < encounters.size() - 1) {
             currentEncounterIndex++;
             return true;
         }
+
+        if (currentLevelIndex < levels.size() - 1) {
+            currentLevelIndex++;
+            currentEncounterIndex = 0;
+            return true;
+        }
+
         return false;
+    }
+
+    public void restoreCurrentPartyHealth() {
+        Party party = getCurrentParty();
+
+        if (party == null) {
+            return;
+        }
+
+        for (Hero hero : party.getMembers()) {
+            hero.restoreHealth();
+        }
     }
 }
