@@ -2,13 +2,15 @@ package it.unicam.cs.mpgc.rpg129131;
 
 import java.util.Map;
 
-public class Weapon extends Item {
+public class Weapon implements Item {
 
     private final String name;
     private final double baseMultiplier;
     private final Map<EnemyType, Double> effectiveness;
 
-    public Weapon(String name, double baseMultiplier, Map<EnemyType, Double> effectiveness) {
+    public Weapon(String name,
+                  double baseMultiplier,
+                  Map<EnemyType, Double> effectiveness) {
 
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Il nome dell'arma non può essere nullo o vuoto.");
@@ -27,6 +29,7 @@ public class Weapon extends Item {
         this.effectiveness = Map.copyOf(effectiveness);
     }
 
+    @Override
     public String getName() {
         return name;
     }
