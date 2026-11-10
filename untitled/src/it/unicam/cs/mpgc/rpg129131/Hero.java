@@ -6,7 +6,6 @@ public abstract class Hero extends Entity {
     private final Inventory inventory;
 
     protected Hero(String name, int health, int attack, int defense, boolean unlocked) {
-
         super(name, health, attack, defense);
 
         this.unlocked = unlocked;
@@ -18,10 +17,14 @@ public abstract class Hero extends Entity {
     }
 
     public void unlock() {
-        this.unlocked = true;
+        unlocked = true;
     }
 
     public Inventory getInventory() {
         return inventory;
+    }
+
+    public void restoreHealth() {
+        healToMax();
     }
 }
