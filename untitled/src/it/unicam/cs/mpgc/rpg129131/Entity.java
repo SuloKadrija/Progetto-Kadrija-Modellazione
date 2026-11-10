@@ -1,21 +1,37 @@
 package it.unicam.cs.mpgc.rpg129131;
+
 public abstract class Entity {
 
     private final String name;
     private int health;
     private final int attack;
     private final int defense;
+    private final int maxHealth;
 
     protected Entity(String name, int health, int attack, int defense) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Il nome non può essere nullo o vuoto."
+            );
+        }
 
-        if (name==null){
-            throw new NullPointerException("Name cannot be null");
+        if (health <= 0) {
+            throw new IllegalArgumentException("La vita iniziale deve essere maggiore di zero.");
+        }
+
+        if (attack < 0) {
+            throw new IllegalArgumentException("L'attacco non può essere negativo.");
+        }
+
+        if (defense < 0) {
+            throw new IllegalArgumentException("La difesa non può essere negativa.");
         }
 
         this.name = name;
         this.health = health;
         this.attack = attack;
         this.defense = defense;
+        this.maxHealth = health;
     }
 
     public String getName() {
@@ -24,6 +40,10 @@ public abstract class Entity {
 
     public int getHealth() {
         return health;
+    }
+
+    public int getMaxHealth() {
+        return maxHealth;
     }
 
     public int getAttack() {
@@ -39,7 +59,14 @@ public abstract class Entity {
     }
 
     public void takeDamage(int damage) {
-        health -= damage;
-        if(health<0) this.health=0;
+        if (damage < 0) {
+            throw new IllegalArgumentException("Il danno non può essere negativo.");
+        }
+
+        health = Math.max(0, health - damage);
+    }
+
+    public void healToMax() {
+        health = maxHealth;
     }
 }
