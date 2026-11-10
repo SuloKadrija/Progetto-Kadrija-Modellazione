@@ -1,8 +1,10 @@
 package it.unicam.cs.mpgc.rpg129131;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 public class RoundManager {
 
@@ -204,10 +206,49 @@ public class RoundManager {
             );
         }
 
+        Set<Hero> heroesWithAction = new HashSet<>();
+
         for (HeroAction action : heroActions) {
             if (action == null) {
                 throw new IllegalArgumentException(
                         "Le azioni degli eroi non possono contenere null."
+                );
+            }
+
+            Hero hero;
+
+            if (action instanceof AttackAction attackAction) {
+                hero = attackAction.hero();
+
+                if (!encounter.getEnemies().contains(attackAction.target())) {
+                    throw new IllegalArgumentException(
+                            "Il bersaglio non appartiene all'incontro."
+                    );
+                }
+            } else if (action instanceof PotionAction potionAction) {
+                hero = potionAction.hero();
+            } else {
+                throw new IllegalArgumentException(
+                        "Tipo di azione non supportato."
+                );
+            }
+
+            if (hero == null) {
+                throw new IllegalArgumentException(
+                        "L'eroe dell'azione non può essere null."
+                );
+            }
+
+            if (!encounter.getParty().getMembers().contains(hero)) {
+                throw new IllegalArgumentException(
+                        "L'eroe dell'azione non appartiene al party."
+                );
+            }
+
+            if (!heroesWithAction.add(hero)) {
+                throw new IllegalArgumentException(
+                        hero.getName()
+                                + " può eseguire una sola azione per round."
                 );
             }
         }
