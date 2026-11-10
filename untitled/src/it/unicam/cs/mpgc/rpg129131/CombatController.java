@@ -14,7 +14,7 @@ public class CombatController {
         this.roundManager = roundManager;
     }
 
-    public List<CombatEvent> executeRound(Encounter encounter, List<AttackAction> heroActions) {
+    public List<CombatEvent> executeRound(Encounter encounter, List<HeroAction> heroActions) {
         return roundManager.playRound(encounter, heroActions);
     }
 
