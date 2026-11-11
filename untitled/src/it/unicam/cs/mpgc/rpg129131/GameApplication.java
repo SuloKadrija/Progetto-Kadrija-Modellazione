@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import javafx.animation.PauseTransition;
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -18,8 +19,12 @@ import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 public class GameApplication extends Application {
+
+    private final PauseTransition enemyPause =
+            new PauseTransition(Duration.seconds(0.7));
 
     private GameSession session;
     private Stage window;
@@ -35,11 +40,12 @@ public class GameApplication extends Application {
     private Button attackButton;
     private Button potionButton;
     private Button skipButton;
-    private Button enemyActionButton;
 
     @Override
     public void start(Stage stage) {
         window = stage;
+
+        enemyPause.setOnFinished(event -> playEnemyAction());
 
         createCombatView();
 
@@ -57,11 +63,19 @@ public class GameApplication extends Application {
                     "La partita in corso non verrà salvata."
             )) {
                 event.consume();
+                return;
             }
+
+            enemyPause.stop();
         });
 
         showMainMenu();
         stage.show();
+    }
+
+    @Override
+    public void stop() {
+        enemyPause.stop();
     }
 
     private void createCombatView() {
@@ -94,9 +108,6 @@ public class GameApplication extends Application {
         skipButton = new Button("Passa turno");
         skipButton.setOnAction(event -> skipTurn());
 
-        enemyActionButton = new Button("Prossima azione nemica");
-        enemyActionButton.setOnAction(event -> playEnemyAction());
-
         Button exitButton = new Button("Esci");
         exitButton.setOnAction(event -> requestExit());
 
@@ -107,7 +118,6 @@ public class GameApplication extends Application {
                 attackButton,
                 potionButton,
                 skipButton,
-                enemyActionButton,
                 exitButton
         );
 
@@ -133,6 +143,8 @@ public class GameApplication extends Application {
     }
 
     private void showMainMenu() {
+        enemyPause.stop();
+
         MainMenuView menu = new MainMenuView(
                 hasActiveGame(),
                 this::startNewGame,
@@ -152,8 +164,8 @@ public class GameApplication extends Application {
     }
 
     private void showCombat() {
-        refreshView();
         scene.setRoot(combatView);
+        refreshView();
     }
 
     private void startNewGame() {
@@ -164,6 +176,8 @@ public class GameApplication extends Application {
         )) {
             return;
         }
+
+        enemyPause.stop();
 
         GameState gameState = new GameFactory().create();
 
@@ -312,7 +326,7 @@ public class GameApplication extends Application {
     }
 
     private void playEnemyAction() {
-        if (!hasActiveGame()) {
+        if (!isCombatVisible() || !hasActiveGame()) {
             return;
         }
 
@@ -325,7 +339,7 @@ public class GameApplication extends Application {
     }
 
     private Hero getActingHero() {
-        if (!hasActiveGame()) {
+        if (!isCombatVisible() || !hasActiveGame()) {
             return null;
         }
 
@@ -336,6 +350,10 @@ public class GameApplication extends Application {
         return session != null
                 && session.isStarted()
                 && !session.isFinished();
+    }
+
+    private boolean isCombatVisible() {
+        return scene != null && scene.getRoot() == combatView;
     }
 
     private List<Enemy> getAvailableTargets(
@@ -411,33 +429,44 @@ public class GameApplication extends Application {
     }
 
     private boolean confirm(String header, String message) {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        enemyPause.stop();
 
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.initOwner(window);
         alert.setTitle("Supernatural RPG");
         alert.setHeaderText(header);
         alert.setContentText(message);
 
-        return alert.showAndWait()
+        boolean confirmed = alert.showAndWait()
                 .filter(button -> button == ButtonType.OK)
                 .isPresent();
+
+        if (!confirmed && isCombatVisible()) {
+            refreshView();
+        }
+
+        return confirmed;
     }
 
     private void requestExit() {
-        if (!hasActiveGame()
-                || confirm(
+        if (hasActiveGame()
+                && !confirm(
                 "Uscire dal gioco?",
                 "La partita in corso non verrà salvata."
         )) {
-            window.close();
+            return;
         }
+
+        enemyPause.stop();
+        window.close();
     }
 
     private void refreshView() {
+        enemyPause.stop();
+
         attackButton.setDisable(true);
         potionButton.setDisable(true);
         skipButton.setDisable(true);
-        enemyActionButton.setDisable(true);
 
         if (session == null) {
             encounterLabel.setText("Nessuna partita avviata.");
@@ -474,10 +503,13 @@ public class GameApplication extends Application {
 
         if (hero == null) {
             turnLabel.setText(
-                    "Turno dei nemici: premi Prossima azione nemica."
+                    "Turno dei nemici: azioni automatiche in corso."
             );
 
-            enemyActionButton.setDisable(false);
+            if (isCombatVisible()) {
+                enemyPause.playFromStart();
+            }
+
             return;
         }
 
