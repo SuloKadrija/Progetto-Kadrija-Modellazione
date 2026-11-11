@@ -6,11 +6,14 @@ public abstract class Enemy extends Entity {
     private final LevelNumber requiredLevel;
 
     protected Enemy(String name, int health, int attack, int defense, EnemyType type, LevelNumber requiredLevel) {
-
         super(name, health, attack, defense);
 
         if (type == null) {
             throw new IllegalArgumentException("Il tipo di nemico non può essere null.");
+        }
+
+        if (requiredLevel == null) {
+            throw new IllegalArgumentException("Il livello richiesto non può essere null.");
         }
 
         this.type = type;
