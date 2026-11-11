@@ -48,6 +48,22 @@ public class MainMenuView extends StackPane {
                 )
         );
 
+        ImageView dean = createCharacter("/images/Dean.png");
+        ImageView sam = createCharacter("/images/Sam.png");
+
+        StackPane.setAlignment(dean, Pos.BOTTOM_LEFT);
+        StackPane.setAlignment(sam, Pos.BOTTOM_RIGHT);
+
+        StackPane.setMargin(
+                dean,
+                new Insets(0, 0, 0, 20)
+        );
+
+        StackPane.setMargin(
+                sam,
+                new Insets(0, 20, 0, 0)
+        );
+
         ImageView logo = new ImageView(logoImage);
         logo.setPreserveRatio(true);
         logo.setSmooth(true);
@@ -117,7 +133,29 @@ public class MainMenuView extends StackPane {
         content.setAlignment(Pos.CENTER);
         content.setPadding(new Insets(24));
 
-        getChildren().add(content);
+        getChildren().addAll(
+                dean,
+                sam,
+                content
+        );
+    }
+
+    private ImageView createCharacter(String path) {
+        ImageView character = new ImageView(loadImage(path));
+
+        character.setPreserveRatio(true);
+        character.setSmooth(true);
+        character.setMouseTransparent(true);
+
+        character.fitWidthProperty().bind(
+                widthProperty().multiply(0.27)
+        );
+
+        character.fitHeightProperty().bind(
+                heightProperty().multiply(0.62)
+        );
+
+        return character;
     }
 
     private Button createButton(String text, Runnable action) {
