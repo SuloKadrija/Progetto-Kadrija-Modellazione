@@ -14,8 +14,12 @@ public class CombatController {
         this.roundManager = roundManager;
     }
 
-    public List<CombatEvent> executeRound(Encounter encounter, List<HeroAction> heroActions) {
-        return roundManager.playRound(encounter, heroActions);
+    public List<CombatEvent> executeHeroAction(Encounter encounter, HeroAction action) {
+        return roundManager.executeHeroAction(encounter, action);
+    }
+
+    public List<CombatEvent> executeEnemyAction(Encounter encounter, Enemy enemy) {
+        return roundManager.executeEnemyAction(encounter, enemy);
     }
 
     public String getCombatResult(Encounter encounter) {

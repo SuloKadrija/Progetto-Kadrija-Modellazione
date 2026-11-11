@@ -6,13 +6,9 @@ public interface GameView {
 
     void showMessage(String message);
 
-    void showStatus(
-            LevelNumber level,
-            int encounterNumber,
-            Encounter encounter
-    );
+    void showStatus(LevelNumber level, int encounterNumber, Encounter encounter);
 
-    List<HeroAction> readActions(Encounter encounter);
+    HeroAction readAction(Hero hero, Encounter encounter);
 
     void showEvents(List<CombatEvent> events);
 }

@@ -9,7 +9,9 @@ public class GameRunner {
 
     public GameRunner(GameSession session, GameView view) {
         if (session == null || view == null) {
-            throw new IllegalArgumentException("La sessione e la vista non possono essere null.");
+            throw new IllegalArgumentException(
+                    "La sessione e la vista non possono essere null."
+            );
         }
 
         this.session = session;
@@ -26,14 +28,32 @@ public class GameRunner {
             Encounter encounter = gameState.getCurrentEncounter();
 
             if (encounter == null) {
-                throw new IllegalStateException("Non è disponibile un incontro corrente.");
+                throw new IllegalStateException(
+                        "Non è disponibile un incontro corrente."
+                );
             }
 
-            view.showStatus(gameState.getCurrentLevel().getNumber(), gameState.getCurrentEncounterIndex() + 1, encounter);
+            view.showStatus(
+                    gameState.getCurrentLevel().getNumber(),
+                    gameState.getCurrentEncounterIndex() + 1,
+                    encounter
+            );
 
-            List<HeroAction> actions = view.readActions(encounter);
+            Hero hero = session.getCurrentHero();
 
-            List<CombatEvent> events = session.playRound(actions);
+            List<CombatEvent> events;
+
+            if (hero != null) {
+                HeroAction action = view.readAction(hero, encounter);
+
+                if (action == null) {
+                    events = session.skipCurrentHero();
+                } else {
+                    events = session.playHeroAction(action);
+                }
+            } else {
+                events = session.playNextEnemyAction();
+            }
 
             view.showEvents(events);
         }
@@ -51,9 +71,13 @@ public class GameRunner {
         GameState gameState = session.getGameState();
 
         if (gameState.isGameCompleted()) {
-            view.showMessage("\nVITTORIA: hai completato tutti i livelli!");
+            view.showMessage(
+                    "\nVITTORIA: hai completato tutti i livelli!"
+            );
         } else if (gameState.isGameOver()) {
-            view.showMessage("\nGAME OVER: il gruppo è stato sconfitto.");
+            view.showMessage(
+                    "\nGAME OVER: il gruppo è stato sconfitto."
+            );
         }
     }
 }

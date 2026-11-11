@@ -1,10 +1,8 @@
 package it.unicam.cs.mpgc.rpg129131;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
-import java.util.Set;
 
 public class RoundManager {
 
@@ -16,50 +14,78 @@ public class RoundManager {
     }
 
     public RoundManager(CombatService combatService, Random random) {
-        if (combatService == null) {
-            throw new IllegalArgumentException(
-                    "Il servizio di combattimento non può essere null."
-            );
-        }
-
-        if (random == null) {
-            throw new IllegalArgumentException(
-                    "Il generatore casuale non può essere null."
-            );
+        if (combatService == null || random == null) {
+            throw new IllegalArgumentException("Il servizio di combattimento e il generatore casuale " + "non possono essere null.");
         }
 
         this.combatService = combatService;
         this.random = random;
     }
 
-    public List<CombatEvent> playRound(
-            Encounter encounter,
-            List<HeroAction> heroActions
-    ) {
-        validateRound(encounter, heroActions);
+    public List<CombatEvent> executeHeroAction(Encounter encounter, HeroAction action) {
+        validateEncounter(encounter);
+
+        if (action == null) {
+            throw new IllegalArgumentException("L'azione non può essere null.");
+        }
 
         List<CombatEvent> events = new ArrayList<>();
 
-        playHeroesTurn(heroActions, events);
+        if (action instanceof AttackAction attackAction) {
+            validateHero(encounter, attackAction.hero());
 
-        if (!encounter.isCompleted()) {
-            playEnemiesTurn(encounter, events);
+            if (!encounter.getEnemies().contains(attackAction.target())) {
+                throw new IllegalArgumentException("Il bersaglio non appartiene all'incontro.");
+            }
+
+            playAttackAction(attackAction, events);
+        } else if (action instanceof PotionAction potionAction) {
+            validateHero(encounter, potionAction.hero());
+            playPotionAction(potionAction, events);
+        } else {
+            throw new IllegalArgumentException("Tipo di azione non supportato.");
         }
 
         return events;
     }
 
-    private void playHeroesTurn(
-            List<HeroAction> heroActions,
-            List<CombatEvent> events
-    ) {
-        for (HeroAction action : heroActions) {
-            if (action instanceof AttackAction attackAction) {
-                playAttackAction(attackAction, events);
-            } else if (action instanceof PotionAction potionAction) {
-                playPotionAction(potionAction, events);
-            }
+    public List<CombatEvent> executeEnemyAction(Encounter encounter, Enemy enemy) {
+        validateEncounter(encounter);
+
+        if (enemy == null || !encounter.getEnemies().contains(enemy)) {
+            throw new IllegalArgumentException("Il nemico deve appartenere all'incontro.");
         }
+
+        List<CombatEvent> events = new ArrayList<>();
+
+        if (!enemy.isAlive() || encounter.isCompleted()) {
+            return events;
+        }
+
+        List<Hero> targets = encounter.getParty().getMembers().stream().filter(Hero::isAlive).toList();
+
+        if (targets.isEmpty()) {
+            return events;
+        }
+
+        Hero target = targets.get(random.nextInt(targets.size()));
+
+        int calculatedDamage = Math.max(1, enemy.getAttack() - target.getDefense());
+
+        int healthBefore = target.getHealth();
+
+        target.takeDamage(calculatedDamage);
+
+        int actualDamage = healthBefore - target.getHealth();
+
+        events.add(new CombatEvent(
+                enemy.getName() + " attacca " + target.getName() + " e infligge " + actualDamage + " danni. HP: " + target.getHealth() + "/" + target.getMaxHealth()));
+
+        if (!target.isAlive()) {
+            events.add(new CombatEvent(target.getName() + " è stato sconfitto."));
+        }
+
+        return events;
     }
 
     private void playAttackAction(
@@ -70,60 +96,41 @@ public class RoundManager {
         Enemy target = action.target();
 
         if (!hero.isAlive()) {
-            events.add(new CombatEvent(
-                    hero.getName() + " è sconfitto e non può attaccare."
-            ));
+            events.add(new CombatEvent(hero.getName() + " è sconfitto e non può attaccare."));
             return;
         }
 
         if (!target.isAlive()) {
-            events.add(new CombatEvent(
-                    target.getName() + " è già sconfitto."
-            ));
+            events.add(new CombatEvent(target.getName() + " è già sconfitto."));
             return;
         }
 
         try {
-            int damage = combatService.attack(
-                    hero,
-                    action.weapon(),
-                    target
-            );
+            int damage = combatService.attack(hero, action.weapon(), target);
 
             events.add(new CombatEvent(
-                    hero.getName()
-                            + " attacca "
-                            + target.getName()
-                            + " con "
-                            + action.weapon().getName()
-                            + " e infligge "
-                            + damage
-                            + " danni."
-            ));
+                    hero.getName() + " attacca " + target.getName() + " con " + action.weapon().getName()
+                            + " e infligge " + damage + " danni. HP: " + target.getHealth() + "/" + target.getMaxHealth()));
+
+            if (!target.isAlive()) {
+                events.add(new CombatEvent(target.getName() + " è stato sconfitto."));
+            }
         } catch (IllegalArgumentException | IllegalStateException e) {
             events.add(new CombatEvent(e.getMessage()));
         }
     }
 
-    private void playPotionAction(
-            PotionAction action,
-            List<CombatEvent> events
-    ) {
+    private void playPotionAction(PotionAction action, List<CombatEvent> events) {
         Hero hero = action.hero();
         Potion potion = action.potion();
 
         if (!hero.isAlive()) {
-            events.add(new CombatEvent(
-                    hero.getName()
-                            + " è sconfitto e non può usare la pozione."
-            ));
+            events.add(new CombatEvent(hero.getName() + " è sconfitto e non può usare la pozione."));
             return;
         }
 
         if (!hero.getInventory().contains(potion)) {
-            events.add(new CombatEvent(
-                    hero.getName() + " non possiede più questa pozione."
-            ));
+            events.add(new CombatEvent(hero.getName() + " non possiede questa pozione."));
             return;
         }
 
@@ -133,124 +140,27 @@ public class RoundManager {
             potion.use(hero);
             hero.getInventory().removeItem(potion);
 
-            int recoveredHealth = hero.getHealth() - healthBefore;
-
             events.add(new CombatEvent(
-                    hero.getName()
-                            + " usa una pozione e recupera "
-                            + recoveredHealth
-                            + " punti vita. HP: "
-                            + hero.getHealth()
-                            + "/"
-                            + hero.getMaxHealth()
-            ));
+                    hero.getName() + " usa una pozione e recupera " + (hero.getHealth() - healthBefore)
+                            + " punti vita. HP: " + hero.getHealth() + "/" + hero.getMaxHealth()));
         } catch (IllegalArgumentException | IllegalStateException e) {
             events.add(new CombatEvent(e.getMessage()));
         }
     }
 
-    private void playEnemiesTurn(
-            Encounter encounter,
-            List<CombatEvent> events
-    ) {
-        Party party = encounter.getParty();
+    private void validateEncounter(Encounter encounter) {
+        if (encounter == null) {
+            throw new IllegalArgumentException("L'incontro non può essere null.");
+        }
 
-        for (Enemy enemy : encounter.getEnemies()) {
-            if (!enemy.isAlive()) {
-                continue;
-            }
-
-            List<Hero> availableTargets = party.getMembers().stream()
-                    .filter(Hero::isAlive)
-                    .toList();
-
-            if (availableTargets.isEmpty()) {
-                return;
-            }
-
-            Hero target = availableTargets.get(
-                    random.nextInt(availableTargets.size())
-            );
-
-            int damage = Math.max(
-                    1,
-                    enemy.getAttack() - target.getDefense()
-            );
-
-            target.takeDamage(damage);
-
-            events.add(new CombatEvent(
-                    enemy.getName()
-                            + " attacca "
-                            + target.getName()
-                            + " e infligge "
-                            + damage
-                            + " danni."
-            ));
+        if (encounter.isCompleted() || !encounter.getParty().hasLivingMembers()) {
+            throw new IllegalStateException("Il combattimento è terminato.");
         }
     }
 
-    private void validateRound(
-            Encounter encounter,
-            List<HeroAction> heroActions
-    ) {
-        if (encounter == null) {
-            throw new IllegalArgumentException(
-                    "L'incontro non può essere null."
-            );
-        }
-
-        if (heroActions == null) {
-            throw new IllegalArgumentException(
-                    "Le azioni degli eroi non possono essere null."
-            );
-        }
-
-        Set<Hero> heroesWithAction = new HashSet<>();
-
-        for (HeroAction action : heroActions) {
-            if (action == null) {
-                throw new IllegalArgumentException(
-                        "Le azioni degli eroi non possono contenere null."
-                );
-            }
-
-            Hero hero;
-
-            if (action instanceof AttackAction attackAction) {
-                hero = attackAction.hero();
-
-                if (!encounter.getEnemies().contains(attackAction.target())) {
-                    throw new IllegalArgumentException(
-                            "Il bersaglio non appartiene all'incontro."
-                    );
-                }
-            } else if (action instanceof PotionAction potionAction) {
-                hero = potionAction.hero();
-            } else {
-                throw new IllegalArgumentException(
-                        "Tipo di azione non supportato."
-                );
-            }
-
-            if (hero == null) {
-                throw new IllegalArgumentException(
-                        "L'eroe dell'azione non può essere null."
-                );
-            }
-
-            if (!encounter.getParty().getMembers().contains(hero)) {
-                throw new IllegalArgumentException(
-                        "L'eroe dell'azione non appartiene al party."
-                );
-            }
-
-            if (!heroesWithAction.add(hero)) {
-                throw new IllegalArgumentException(
-                        hero.getName()
-                                + " può eseguire una sola azione per round."
-                );
-            }
+    private void validateHero(Encounter encounter, Hero hero) {
+        if (hero == null || !encounter.getParty().getMembers().contains(hero)) {
+            throw new IllegalArgumentException("L'eroe deve appartenere al party dell'incontro.");
         }
     }
 }
