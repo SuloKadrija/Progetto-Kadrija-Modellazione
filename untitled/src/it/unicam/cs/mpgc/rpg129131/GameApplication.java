@@ -12,6 +12,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ChoiceDialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -19,9 +20,13 @@ import javafx.stage.Stage;
 public class GameApplication extends Application {
 
     private GameSession session;
+
     private TextArea eventArea;
     private Label statusLabel;
+
     private Button attackButton;
+    private Button potionButton;
+    private Button skipButton;
     private Button enemyActionButton;
 
     @Override
@@ -46,9 +51,26 @@ public class GameApplication extends Application {
         attackButton.setDisable(true);
         attackButton.setOnAction(event -> attack());
 
+        potionButton = new Button("Usa pozione");
+        potionButton.setDisable(true);
+        potionButton.setOnAction(event -> usePotion());
+
+        skipButton = new Button("Passa turno");
+        skipButton.setDisable(true);
+        skipButton.setOnAction(event -> skipTurn());
+
         enemyActionButton = new Button("Prossima azione nemica");
         enemyActionButton.setDisable(true);
         enemyActionButton.setOnAction(event -> playEnemyAction());
+
+        HBox heroControls = new HBox(
+                12,
+                attackButton,
+                potionButton,
+                skipButton
+        );
+
+        heroControls.setAlignment(Pos.CENTER);
 
         Button exitButton = new Button("Esci");
         exitButton.setOnAction(event -> stage.close());
@@ -58,7 +80,7 @@ public class GameApplication extends Application {
                 title,
                 statusLabel,
                 newGameButton,
-                attackButton,
+                heroControls,
                 enemyActionButton,
                 eventArea,
                 exitButton
@@ -101,11 +123,7 @@ public class GameApplication extends Application {
     }
 
     private void attack() {
-        if (session == null || session.isFinished()) {
-            return;
-        }
-
-        Hero hero = session.getCurrentHero();
+        Hero hero = getActingHero();
 
         if (hero == null) {
             return;
@@ -175,6 +193,53 @@ public class GameApplication extends Application {
         updateControls();
     }
 
+    private void usePotion() {
+        Hero hero = getActingHero();
+
+        if (hero == null || hero.getHealth() >= hero.getMaxHealth()) {
+            return;
+        }
+
+        List<Potion> potions = getPotions(hero);
+
+        if (potions.isEmpty()) {
+            return;
+        }
+
+        showEvents(
+                session.playHeroAction(
+                        new PotionAction(hero, potions.get(0))
+                )
+        );
+
+        updateControls();
+    }
+
+    private void skipTurn() {
+        Hero hero = getActingHero();
+
+        if (hero == null) {
+            return;
+        }
+
+        Encounter encounter =
+                session.getGameState().getCurrentEncounter();
+
+        boolean canAttack =
+                !getAvailableTargets(hero, encounter).isEmpty();
+
+        boolean canHeal =
+                hero.getHealth() < hero.getMaxHealth()
+                        && !getPotions(hero).isEmpty();
+
+        if (canAttack || canHeal) {
+            return;
+        }
+
+        showEvents(session.skipCurrentHero());
+        updateControls();
+    }
+
     private void playEnemyAction() {
         if (session == null || session.isFinished()) {
             return;
@@ -186,6 +251,14 @@ public class GameApplication extends Application {
 
         showEvents(session.playNextEnemyAction());
         updateControls();
+    }
+
+    private Hero getActingHero() {
+        if (session == null || session.isFinished()) {
+            return null;
+        }
+
+        return session.getCurrentHero();
     }
 
     private List<Enemy> getAvailableTargets(
@@ -220,11 +293,27 @@ public class GameApplication extends Application {
         return weapons;
     }
 
+    private List<Potion> getPotions(Hero hero) {
+        List<Potion> potions = new ArrayList<>();
+
+        for (Item item : hero.getInventory().getItems()) {
+            if (item instanceof Potion potion) {
+                potions.add(potion);
+            }
+        }
+
+        return potions;
+    }
+
     private int chooseIndex(
             String title,
             String header,
             List<String> choices
     ) {
+        if (choices.isEmpty()) {
+            return -1;
+        }
+
         ChoiceDialog<String> dialog = new ChoiceDialog<>(
                 choices.get(0),
                 choices
@@ -246,6 +335,8 @@ public class GameApplication extends Application {
 
     private void updateControls() {
         attackButton.setDisable(true);
+        potionButton.setDisable(true);
+        skipButton.setDisable(true);
         enemyActionButton.setDisable(true);
 
         if (session == null) {
@@ -275,18 +366,24 @@ public class GameApplication extends Application {
         boolean canAttack =
                 !getAvailableTargets(hero, encounter).isEmpty();
 
-        attackButton.setDisable(!canAttack);
+        boolean canHeal =
+                hero.getHealth() < hero.getMaxHealth()
+                        && !getPotions(hero).isEmpty();
 
-        if (canAttack) {
-            statusLabel.setText("Turno di " + hero.getName());
-        } else {
-            statusLabel.setText(
-                    "Turno di " + hero.getName()
-                            + ": nessun attacco disponibile. "
-                            + "Cura e passaggio del turno "
-                            + "non sono ancora collegati."
-            );
+        attackButton.setDisable(!canAttack);
+        potionButton.setDisable(!canHeal);
+        skipButton.setDisable(canAttack || canHeal);
+
+        String status =
+                "Turno di " + hero.getName()
+                        + " - HP: " + hero.getHealth()
+                        + "/" + hero.getMaxHealth();
+
+        if (!canAttack && !canHeal) {
+            status += " — Nessuna azione disponibile: passa il turno.";
         }
+
+        statusLabel.setText(status);
     }
 
     private void showEvents(List<CombatEvent> events) {
