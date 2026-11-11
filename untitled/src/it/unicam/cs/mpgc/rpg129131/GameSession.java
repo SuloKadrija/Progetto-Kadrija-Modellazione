@@ -14,9 +14,17 @@ public class GameSession {
     private int heroIndex;
     private int enemyIndex;
 
-    public GameSession(GameState gameState, CombatController combatController, LevelPreparation levelPreparation) {
-        if (gameState == null || combatController == null || levelPreparation == null) {
-            throw new IllegalArgumentException("I componenti della partita non possono essere null.");
+    public GameSession(
+            GameState gameState,
+            CombatController combatController,
+            LevelPreparation levelPreparation
+    ) {
+        if (gameState == null
+                || combatController == null
+                || levelPreparation == null) {
+            throw new IllegalArgumentException(
+                    "I componenti della partita non possono essere null."
+            );
         }
 
         this.gameState = gameState;
@@ -26,11 +34,19 @@ public class GameSession {
 
     public List<CombatEvent> startNewGame() {
         if (started) {
-            throw new IllegalStateException("La sessione è già stata avviata.");
+            throw new IllegalStateException(
+                    "La sessione è già stata avviata."
+            );
         }
 
-        if (gameState.getCurrentLevelIndex() != 0 || gameState.getCurrentEncounterIndex() != 0 || gameState.isGameCompleted() || gameState.isGameOver()) {
-            throw new IllegalStateException("Per avviare una nuova partita serve uno stato iniziale valido.");
+        if (gameState.getCurrentLevelIndex() != 0
+                || gameState.getCurrentEncounterIndex() != 0
+                || gameState.isGameCompleted()
+                || gameState.isGameOver()) {
+            throw new IllegalStateException(
+                    "Per avviare una nuova partita "
+                            + "serve uno stato iniziale valido."
+            );
         }
 
         List<CombatEvent> events = new ArrayList<>();
@@ -38,6 +54,7 @@ public class GameSession {
         events.add(new CombatEvent("=== SUPERNATURAL RPG ==="));
 
         prepareCurrentLevel(events);
+        prepareCurrentEncounter(events);
 
         started = true;
         beginRound();
@@ -51,7 +68,9 @@ public class GameSession {
         Hero currentHero = getCurrentHero();
 
         if (currentHero == null) {
-            throw new IllegalStateException("È il turno dei nemici.");
+            throw new IllegalStateException(
+                    "È il turno dei nemici."
+            );
         }
 
         Hero actingHero;
@@ -61,11 +80,15 @@ public class GameSession {
         } else if (action instanceof PotionAction potionAction) {
             actingHero = potionAction.hero();
         } else {
-            throw new IllegalArgumentException("L'azione non è supportata o è null.");
+            throw new IllegalArgumentException(
+                    "L'azione non è supportata o è null."
+            );
         }
 
         if (actingHero != currentHero) {
-            throw new IllegalArgumentException("Deve agire " + currentHero.getName() + ".");
+            throw new IllegalArgumentException(
+                    "Deve agire " + currentHero.getName() + "."
+            );
         }
 
         Encounter encounter = gameState.getCurrentEncounter();
@@ -90,7 +113,9 @@ public class GameSession {
         Hero hero = getCurrentHero();
 
         if (hero == null) {
-            throw new IllegalStateException("È il turno dei nemici.");
+            throw new IllegalStateException(
+                    "È il turno dei nemici."
+            );
         }
 
         if (hasAvailableAction(hero)) {
@@ -101,7 +126,9 @@ public class GameSession {
 
         List<CombatEvent> events = List.of(
                 new CombatEvent(
-                        hero.getName() + " non ha azioni disponibili e passa il turno."
+                        hero.getName()
+                                + " non ha azioni disponibili "
+                                + "e passa il turno."
                 )
         );
 
@@ -115,7 +142,9 @@ public class GameSession {
         requireActiveGame();
 
         if (!enemiesTurn) {
-            throw new IllegalStateException("Devono ancora agire gli eroi.");
+            throw new IllegalStateException(
+                    "Devono ancora agire gli eroi."
+            );
         }
 
         Encounter encounter = gameState.getCurrentEncounter();
@@ -127,7 +156,9 @@ public class GameSession {
         }
 
         if (enemyIndex >= enemies.size()) {
-            throw new IllegalStateException("Non è disponibile un nemico che possa agire.");
+            throw new IllegalStateException(
+                    "Non è disponibile un nemico che possa agire."
+            );
         }
 
         Enemy enemy = enemies.get(enemyIndex);
@@ -162,7 +193,9 @@ public class GameSession {
             return null;
         }
 
-        return gameState.getCurrentParty().getMembers().get(heroIndex);
+        return gameState.getCurrentParty()
+                .getMembers()
+                .get(heroIndex);
     }
 
     public GameState getGameState() {
@@ -174,7 +207,8 @@ public class GameSession {
     }
 
     public boolean isFinished() {
-        return gameState.isGameCompleted() || gameState.isGameOver();
+        return gameState.isGameCompleted()
+                || gameState.isGameOver();
     }
 
     private void beginRound() {
@@ -186,7 +220,8 @@ public class GameSession {
     }
 
     private void moveToNextLivingHero() {
-        List<Hero> heroes = gameState.getCurrentParty().getMembers();
+        List<Hero> heroes =
+                gameState.getCurrentParty().getMembers();
 
         while (heroIndex < heroes.size()
                 && !heroes.get(heroIndex).isAlive()) {
@@ -198,9 +233,17 @@ public class GameSession {
         }
     }
 
-    private boolean resolveEncounter(Encounter encounter, List<CombatEvent> events) {
+    private boolean resolveEncounter(
+            Encounter encounter,
+            List<CombatEvent> events
+    ) {
         if (!encounter.getParty().hasLivingMembers()) {
-            events.add(new CombatEvent(combatController.getCombatResult(encounter)));
+            events.add(
+                    new CombatEvent(
+                            combatController.getCombatResult(encounter)
+                    )
+            );
+
             return true;
         }
 
@@ -208,28 +251,42 @@ public class GameSession {
             return false;
         }
 
-        events.add(new CombatEvent(combatController.getCombatResult(encounter)));
+        events.add(
+                new CombatEvent(
+                        combatController.getCombatResult(encounter)
+                )
+        );
 
         for (Hero hero : encounter.getParty().getMembers()) {
             hero.restoreHealth();
         }
 
-        events.add(new CombatEvent("Incontro superato! Tutto il gruppo recupera la vita."));
+        events.add(
+                new CombatEvent(
+                        "Incontro superato! "
+                                + "Tutto il gruppo recupera la vita."
+                )
+        );
 
         if (gameState.isGameCompleted()) {
             return true;
         }
 
-        int previousLevelIndex = gameState.getCurrentLevelIndex();
+        int previousLevelIndex =
+                gameState.getCurrentLevelIndex();
 
         if (!gameState.advanceEncounter()) {
-            throw new IllegalStateException("Impossibile avanzare dopo l'incontro vinto.");
+            throw new IllegalStateException(
+                    "Impossibile avanzare dopo l'incontro vinto."
+            );
         }
 
-        if (gameState.getCurrentLevelIndex() != previousLevelIndex) {
+        if (gameState.getCurrentLevelIndex()
+                != previousLevelIndex) {
             prepareCurrentLevel(events);
         }
 
+        prepareCurrentEncounter(events);
         beginRound();
 
         return true;
@@ -257,25 +314,60 @@ public class GameSession {
     }
 
     private void prepareCurrentLevel(List<CombatEvent> events) {
-        LevelNumber number = gameState.getCurrentLevel().getNumber();
+        LevelNumber number =
+                gameState.getCurrentLevel().getNumber();
+
         Party party = gameState.getCurrentParty();
 
         if (party == null) {
-            throw new IllegalStateException("Non è disponibile un gruppo per il livello corrente.");
+            throw new IllegalStateException(
+                    "Non è disponibile un gruppo "
+                            + "per il livello corrente."
+            );
         }
 
         levelPreparation.prepare(number, party);
 
-        events.add(new CombatEvent("Inizio livello " + number + ": gruppo sbloccato e dotazioni preparate."));
+        events.add(
+                new CombatEvent(
+                        "Inizio livello " + number
+                                + ": gruppo sbloccato "
+                                + "e dotazioni preparate."
+                )
+        );
+    }
+
+    private void prepareCurrentEncounter(
+            List<CombatEvent> events
+    ) {
+        Party party = gameState.getCurrentParty();
+
+        levelPreparation.prepareEncounter(party);
+
+        int encounterNumber =
+                gameState.getCurrentEncounterIndex() + 1;
+
+        events.add(
+                new CombatEvent(
+                        "Inizio incontro " + encounterNumber
+                                + ": ogni eroe riceve una pozione. "
+                                + "Le pozioni non usate "
+                                + "non si accumulano."
+                )
+        );
     }
 
     private void requireActiveGame() {
         if (!started) {
-            throw new IllegalStateException("La sessione non è ancora stata avviata.");
+            throw new IllegalStateException(
+                    "La sessione non è ancora stata avviata."
+            );
         }
 
         if (isFinished()) {
-            throw new IllegalStateException("La partita è terminata.");
+            throw new IllegalStateException(
+                    "La partita è terminata."
+            );
         }
     }
 }
