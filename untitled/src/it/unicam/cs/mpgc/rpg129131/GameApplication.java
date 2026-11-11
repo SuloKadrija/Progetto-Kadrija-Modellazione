@@ -23,6 +23,8 @@ public class GameApplication extends Application {
 
     private GameSession session;
     private Stage window;
+    private Scene scene;
+    private VBox combatView;
 
     private Label encounterLabel;
     private Label turnLabel;
@@ -39,32 +41,49 @@ public class GameApplication extends Application {
     public void start(Stage stage) {
         window = stage;
 
+        createCombatView();
+
+        scene = new Scene(combatView, 1100, 800);
+
+        stage.setTitle("Supernatural RPG");
+        stage.setMinWidth(750);
+        stage.setMinHeight(700);
+        stage.setScene(scene);
+
+        stage.setOnCloseRequest(event -> {
+            if (hasActiveGame()
+                    && !confirm(
+                    "Uscire dal gioco?",
+                    "La partita in corso non verrà salvata."
+            )) {
+                event.consume();
+            }
+        });
+
+        showMainMenu();
+        stage.show();
+    }
+
+    private void createCombatView() {
         Label title = new Label("SUPERNATURAL RPG");
         title.setStyle("-fx-font-size: 28px; -fx-font-weight: bold;");
 
-        encounterLabel = new Label("Nessuna partita avviata.");
-
-        turnLabel = new Label("Premi Nuova partita per iniziare.");
+        encounterLabel = new Label();
+        turnLabel = new Label();
         turnLabel.setWrapText(true);
 
         statusArea = new TextArea();
         statusArea.setEditable(false);
         statusArea.setWrapText(true);
         statusArea.setPrefRowCount(9);
-        statusArea.setPromptText(
-                "Qui comparirà lo stato degli eroi e dei nemici."
-        );
 
         eventArea = new TextArea();
         eventArea.setEditable(false);
         eventArea.setWrapText(true);
         eventArea.setPrefRowCount(10);
-        eventArea.setPromptText(
-                "Qui compariranno gli eventi della partita."
-        );
 
-        Button newGameButton = new Button("Nuova partita");
-        newGameButton.setOnAction(event -> startNewGame());
+        Button menuButton = new Button("Menu principale");
+        menuButton.setOnAction(event -> showMainMenu());
 
         attackButton = new Button("Attacca");
         attackButton.setOnAction(event -> attack());
@@ -84,7 +103,7 @@ public class GameApplication extends Application {
         FlowPane controls = new FlowPane(12, 12);
         controls.setAlignment(Pos.CENTER);
         controls.getChildren().addAll(
-                newGameButton,
+                menuButton,
                 attackButton,
                 potionButton,
                 skipButton,
@@ -92,7 +111,7 @@ public class GameApplication extends Application {
                 exitButton
         );
 
-        VBox root = new VBox(
+        combatView = new VBox(
                 12,
                 title,
                 encounterLabel,
@@ -104,29 +123,37 @@ public class GameApplication extends Application {
                 eventArea
         );
 
-        root.setAlignment(Pos.TOP_CENTER);
-        root.setPadding(new Insets(24));
+        combatView.setAlignment(Pos.TOP_CENTER);
+        combatView.setPadding(new Insets(24));
 
         VBox.setVgrow(statusArea, Priority.ALWAYS);
         VBox.setVgrow(eventArea, Priority.ALWAYS);
 
-        stage.setTitle("Supernatural RPG");
-        stage.setMinWidth(650);
-        stage.setMinHeight(650);
-        stage.setScene(new Scene(root, 1000, 800));
-
-        stage.setOnCloseRequest(event -> {
-            if (hasActiveGame()
-                    && !confirm(
-                    "Uscire dal gioco?",
-                    "La partita in corso non verrà salvata."
-            )) {
-                event.consume();
-            }
-        });
-
         refreshView();
-        stage.show();
+    }
+
+    private void showMainMenu() {
+        MainMenuView menu = new MainMenuView(
+                hasActiveGame(),
+                this::startNewGame,
+                this::continueGame,
+                this::requestExit
+        );
+
+        scene.setRoot(menu);
+    }
+
+    private void continueGame() {
+        if (!hasActiveGame()) {
+            return;
+        }
+
+        showCombat();
+    }
+
+    private void showCombat() {
+        refreshView();
+        scene.setRoot(combatView);
     }
 
     private void startNewGame() {
@@ -156,7 +183,7 @@ public class GameApplication extends Application {
 
         eventArea.clear();
         showEvents(session.startNewGame());
-        refreshView();
+        showCombat();
     }
 
     private void attack() {
@@ -422,8 +449,8 @@ public class GameApplication extends Application {
         GameState state = session.getGameState();
 
         encounterLabel.setText(
-                "Livello " + state.getCurrentLevel().getNumber()
-                        + " | Incontro "
+                "Livello " + (state.getCurrentLevelIndex() + 1)
+                        + " | Combattimento "
                         + (state.getCurrentEncounterIndex() + 1)
         );
 
@@ -480,9 +507,7 @@ public class GameApplication extends Application {
     }
 
     private void updateStatus(Encounter encounter) {
-        StringBuilder text = new StringBuilder();
-
-        text.append("EROI\n");
+        StringBuilder text = new StringBuilder("EROI\n");
 
         for (Hero hero : encounter.getParty().getMembers()) {
             text.append(hero.getName())
