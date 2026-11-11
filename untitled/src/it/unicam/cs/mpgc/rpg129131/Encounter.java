@@ -24,7 +24,6 @@ public class Encounter {
             }
         }
 
-
         this.party = party;
         this.enemies = new ArrayList<>(enemies);
     }
