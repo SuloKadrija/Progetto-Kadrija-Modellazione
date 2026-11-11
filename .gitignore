@@ -1,0 +1,15 @@
+# Cache e risultati generati da Gradle
+.gradle/
+build/
+
+# Risultati di compilazione
+out/
+*.class
+
+# Configurazioni locali di IntelliJ
+.idea/
+*.iml
+
+# File del sistema operativo
+.DS_Store
+Thumbs.db
