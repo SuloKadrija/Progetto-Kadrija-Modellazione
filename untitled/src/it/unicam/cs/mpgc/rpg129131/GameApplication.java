@@ -8,11 +8,13 @@ import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.ChoiceDialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
-import javafx.scene.layout.HBox;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -20,9 +22,13 @@ import javafx.stage.Stage;
 public class GameApplication extends Application {
 
     private GameSession session;
+    private Stage window;
 
+    private Label encounterLabel;
+    private Label turnLabel;
+
+    private TextArea statusArea;
     private TextArea eventArea;
-    private Label statusLabel;
 
     private Button attackButton;
     private Button potionButton;
@@ -31,15 +37,28 @@ public class GameApplication extends Application {
 
     @Override
     public void start(Stage stage) {
+        window = stage;
+
         Label title = new Label("SUPERNATURAL RPG");
         title.setStyle("-fx-font-size: 28px; -fx-font-weight: bold;");
 
-        statusLabel = new Label("Premi Nuova partita per iniziare.");
-        statusLabel.setWrapText(true);
+        encounterLabel = new Label("Nessuna partita avviata.");
+
+        turnLabel = new Label("Premi Nuova partita per iniziare.");
+        turnLabel.setWrapText(true);
+
+        statusArea = new TextArea();
+        statusArea.setEditable(false);
+        statusArea.setWrapText(true);
+        statusArea.setPrefRowCount(9);
+        statusArea.setPromptText(
+                "Qui comparirà lo stato degli eroi e dei nemici."
+        );
 
         eventArea = new TextArea();
         eventArea.setEditable(false);
         eventArea.setWrapText(true);
+        eventArea.setPrefRowCount(10);
         eventArea.setPromptText(
                 "Qui compariranno gli eventi della partita."
         );
@@ -48,59 +67,77 @@ public class GameApplication extends Application {
         newGameButton.setOnAction(event -> startNewGame());
 
         attackButton = new Button("Attacca");
-        attackButton.setDisable(true);
         attackButton.setOnAction(event -> attack());
 
         potionButton = new Button("Usa pozione");
-        potionButton.setDisable(true);
         potionButton.setOnAction(event -> usePotion());
 
         skipButton = new Button("Passa turno");
-        skipButton.setDisable(true);
         skipButton.setOnAction(event -> skipTurn());
 
         enemyActionButton = new Button("Prossima azione nemica");
-        enemyActionButton.setDisable(true);
         enemyActionButton.setOnAction(event -> playEnemyAction());
 
-        HBox heroControls = new HBox(
-                12,
+        Button exitButton = new Button("Esci");
+        exitButton.setOnAction(event -> requestExit());
+
+        FlowPane controls = new FlowPane(12, 12);
+        controls.setAlignment(Pos.CENTER);
+        controls.getChildren().addAll(
+                newGameButton,
                 attackButton,
                 potionButton,
-                skipButton
-        );
-
-        heroControls.setAlignment(Pos.CENTER);
-
-        Button exitButton = new Button("Esci");
-        exitButton.setOnAction(event -> stage.close());
-
-        VBox root = new VBox(
-                16,
-                title,
-                statusLabel,
-                newGameButton,
-                heroControls,
+                skipButton,
                 enemyActionButton,
-                eventArea,
                 exitButton
         );
 
-        root.setAlignment(Pos.CENTER);
-        root.setPadding(new Insets(30));
+        VBox root = new VBox(
+                12,
+                title,
+                encounterLabel,
+                turnLabel,
+                controls,
+                new Label("Stato del combattimento"),
+                statusArea,
+                new Label("Eventi"),
+                eventArea
+        );
 
+        root.setAlignment(Pos.TOP_CENTER);
+        root.setPadding(new Insets(24));
+
+        VBox.setVgrow(statusArea, Priority.ALWAYS);
         VBox.setVgrow(eventArea, Priority.ALWAYS);
 
-        Scene scene = new Scene(root, 800, 650);
-
         stage.setTitle("Supernatural RPG");
-        stage.setMinWidth(600);
-        stage.setMinHeight(550);
-        stage.setScene(scene);
+        stage.setMinWidth(650);
+        stage.setMinHeight(650);
+        stage.setScene(new Scene(root, 1000, 800));
+
+        stage.setOnCloseRequest(event -> {
+            if (hasActiveGame()
+                    && !confirm(
+                    "Uscire dal gioco?",
+                    "La partita in corso non verrà salvata."
+            )) {
+                event.consume();
+            }
+        });
+
+        refreshView();
         stage.show();
     }
 
     private void startNewGame() {
+        if (hasActiveGame()
+                && !confirm(
+                "Iniziare una nuova partita?",
+                "La partita in corso verrà abbandonata."
+        )) {
+            return;
+        }
+
         GameState gameState = new GameFactory().create();
 
         CombatService combatService = new CombatService();
@@ -119,7 +156,7 @@ public class GameApplication extends Application {
 
         eventArea.clear();
         showEvents(session.startNewGame());
-        updateControls();
+        refreshView();
     }
 
     private void attack() {
@@ -164,11 +201,16 @@ public class GameApplication extends Application {
 
         Enemy target = targets.get(targetIndex);
         List<Weapon> weapons = getUsableWeapons(hero, target);
+
         List<String> weaponNames = new ArrayList<>();
 
         for (int i = 0; i < weapons.size(); i++) {
+            Weapon weapon = weapons.get(i);
+
             weaponNames.add(
-                    (i + 1) + ") " + weapons.get(i).getName()
+                    (i + 1) + ") " + weapon.getName()
+                            + " - Moltiplicatore: "
+                            + weapon.getMultiplierAgainst(target)
             );
         }
 
@@ -182,15 +224,17 @@ public class GameApplication extends Application {
             return;
         }
 
-        Weapon weapon = weapons.get(weaponIndex);
-
         showEvents(
                 session.playHeroAction(
-                        new AttackAction(hero, weapon, target)
+                        new AttackAction(
+                                hero,
+                                weapons.get(weaponIndex),
+                                target
+                        )
                 )
         );
 
-        updateControls();
+        refreshView();
     }
 
     private void usePotion() {
@@ -212,7 +256,7 @@ public class GameApplication extends Application {
                 )
         );
 
-        updateControls();
+        refreshView();
     }
 
     private void skipTurn() {
@@ -237,11 +281,11 @@ public class GameApplication extends Application {
         }
 
         showEvents(session.skipCurrentHero());
-        updateControls();
+        refreshView();
     }
 
     private void playEnemyAction() {
-        if (session == null || session.isFinished()) {
+        if (!hasActiveGame()) {
             return;
         }
 
@@ -250,15 +294,21 @@ public class GameApplication extends Application {
         }
 
         showEvents(session.playNextEnemyAction());
-        updateControls();
+        refreshView();
     }
 
     private Hero getActingHero() {
-        if (session == null || session.isFinished()) {
+        if (!hasActiveGame()) {
             return null;
         }
 
         return session.getCurrentHero();
+    }
+
+    private boolean hasActiveGame() {
+        return session != null
+                && session.isStarted()
+                && !session.isFinished();
     }
 
     private List<Enemy> getAvailableTargets(
@@ -319,7 +369,7 @@ public class GameApplication extends Application {
                 choices
         );
 
-        dialog.initOwner(eventArea.getScene().getWindow());
+        dialog.initOwner(window);
         dialog.setTitle(title);
         dialog.setHeaderText(header);
         dialog.setContentText("Seleziona:");
@@ -333,26 +383,70 @@ public class GameApplication extends Application {
         return choices.indexOf(selected.get());
     }
 
-    private void updateControls() {
+    private boolean confirm(String header, String message) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+
+        alert.initOwner(window);
+        alert.setTitle("Supernatural RPG");
+        alert.setHeaderText(header);
+        alert.setContentText(message);
+
+        return alert.showAndWait()
+                .filter(button -> button == ButtonType.OK)
+                .isPresent();
+    }
+
+    private void requestExit() {
+        if (!hasActiveGame()
+                || confirm(
+                "Uscire dal gioco?",
+                "La partita in corso non verrà salvata."
+        )) {
+            window.close();
+        }
+    }
+
+    private void refreshView() {
         attackButton.setDisable(true);
         potionButton.setDisable(true);
         skipButton.setDisable(true);
         enemyActionButton.setDisable(true);
 
         if (session == null) {
-            statusLabel.setText("Premi Nuova partita per iniziare.");
+            encounterLabel.setText("Nessuna partita avviata.");
+            turnLabel.setText("Premi Nuova partita per iniziare.");
+            statusArea.clear();
             return;
         }
 
+        GameState state = session.getGameState();
+
+        encounterLabel.setText(
+                "Livello " + state.getCurrentLevel().getNumber()
+                        + " | Incontro "
+                        + (state.getCurrentEncounterIndex() + 1)
+        );
+
+        updateStatus(state.getCurrentEncounter());
+
         if (session.isFinished()) {
-            statusLabel.setText("Partita terminata.");
+            if (state.isGameCompleted()) {
+                turnLabel.setText(
+                        "Vittoria! Hai completato tutti i livelli."
+                );
+            } else {
+                turnLabel.setText(
+                        "Sconfitta. Puoi iniziare una nuova partita."
+                );
+            }
+
             return;
         }
 
         Hero hero = session.getCurrentHero();
 
         if (hero == null) {
-            statusLabel.setText(
+            turnLabel.setText(
                     "Turno dei nemici: premi Prossima azione nemica."
             );
 
@@ -360,11 +454,11 @@ public class GameApplication extends Application {
             return;
         }
 
-        Encounter encounter =
-                session.getGameState().getCurrentEncounter();
-
         boolean canAttack =
-                !getAvailableTargets(hero, encounter).isEmpty();
+                !getAvailableTargets(
+                        hero,
+                        state.getCurrentEncounter()
+                ).isEmpty();
 
         boolean canHeal =
                 hero.getHealth() < hero.getMaxHealth()
@@ -374,21 +468,69 @@ public class GameApplication extends Application {
         potionButton.setDisable(!canHeal);
         skipButton.setDisable(canAttack || canHeal);
 
-        String status =
-                "Turno di " + hero.getName()
-                        + " - HP: " + hero.getHealth()
-                        + "/" + hero.getMaxHealth();
+        String text = "Turno di " + hero.getName()
+                + " - HP: " + hero.getHealth()
+                + "/" + hero.getMaxHealth();
 
         if (!canAttack && !canHeal) {
-            status += " — Nessuna azione disponibile: passa il turno.";
+            text += " — Nessuna azione disponibile: passa il turno.";
         }
 
-        statusLabel.setText(status);
+        turnLabel.setText(text);
+    }
+
+    private void updateStatus(Encounter encounter) {
+        StringBuilder text = new StringBuilder();
+
+        text.append("EROI\n");
+
+        for (Hero hero : encounter.getParty().getMembers()) {
+            text.append(hero.getName())
+                    .append(" - HP: ")
+                    .append(hero.getHealth())
+                    .append("/")
+                    .append(hero.getMaxHealth())
+                    .append(" | Pozioni: ")
+                    .append(getPotions(hero).size());
+
+            if (!hero.isAlive()) {
+                text.append(" | Sconfitto");
+            }
+
+            text.append("\n");
+        }
+
+        text.append("\nNEMICI\n");
+
+        List<Enemy> enemies = encounter.getEnemies();
+
+        for (int i = 0; i < enemies.size(); i++) {
+            Enemy enemy = enemies.get(i);
+
+            text.append(i + 1)
+                    .append(") ")
+                    .append(enemy.getName())
+                    .append(" - HP: ")
+                    .append(enemy.getHealth())
+                    .append("/")
+                    .append(enemy.getMaxHealth());
+
+            if (!enemy.isAlive()) {
+                text.append(" | Sconfitto");
+            }
+
+            text.append("\n");
+        }
+
+        statusArea.setText(text.toString());
+        statusArea.positionCaret(0);
     }
 
     private void showEvents(List<CombatEvent> events) {
         for (CombatEvent event : events) {
             eventArea.appendText(event.message() + "\n");
         }
+
+        eventArea.positionCaret(eventArea.getLength());
     }
 }
