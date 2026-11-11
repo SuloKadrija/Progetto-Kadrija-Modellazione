@@ -5,7 +5,7 @@ import java.util.Map;
 public class Quote extends Weapon {
 
     public Quote() {
-        super("Passi della Bibbia", 2.0,
+        super("Passi della Bibbia", 1.2,
                 Map.of(
                         EnemyType.GHOST, 0.0,
                         EnemyType.VAMPIRE, 0.0,
@@ -15,7 +15,7 @@ public class Quote extends Weapon {
                         EnemyType.LUCIFER, 0.0,
                         EnemyType.LEVIATHAN, 0.0,
                         EnemyType.ANGEL, 0.0,
-                        EnemyType.GOD, 2.5
+                        EnemyType.GOD, 2.0
                 )
         );
     }
