@@ -483,7 +483,15 @@ public class GameApplication extends Application {
                         + (state.getCurrentEncounterIndex() + 1)
         );
 
-        updateStatus(state.getCurrentEncounter());
+        Encounter encounter = state.getCurrentEncounter();
+
+        if (encounter != null) {
+            updateStatus(encounter);
+        } else {
+            statusArea.setText(
+                    "Tutti i combattimenti sono stati completati."
+            );
+        }
 
         if (session.isFinished()) {
             if (state.isGameCompleted()) {
