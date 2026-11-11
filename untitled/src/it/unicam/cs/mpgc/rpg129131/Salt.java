@@ -5,7 +5,10 @@ import java.util.Map;
 public class Salt extends Weapon {
 
     public Salt() {
-        super("Sale", 1.5, Map.of(
+        super(
+                "Sale",
+                1.4,
+                Map.of(
                         EnemyType.GHOST, 2.0,
                         EnemyType.VAMPIRE, 0.5,
                         EnemyType.WENDIGO, 0.5

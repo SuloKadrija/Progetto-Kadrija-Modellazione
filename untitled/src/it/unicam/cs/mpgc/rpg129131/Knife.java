@@ -5,6 +5,10 @@ import java.util.Map;
 public class Knife extends Weapon {
 
     public Knife() {
-        super("Pugnale", 1.1, Map.of());
+        super(
+                "Pugnale",
+                1.2,
+                Map.of()
+        );
     }
 }

@@ -5,12 +5,14 @@ import java.util.Map;
 public class DemoniacArrow extends Weapon {
 
     public DemoniacArrow() {
-        super("Freccia demoniaca", 1.2, Map.of(
-                        EnemyType.DEMON, 1.8,
-                        EnemyType.YELLOW_EYED_DEMON, 1.8,
-                        EnemyType.LUCIFER, 1.5
+        super(
+                "Freccia demoniaca",
+                1.5,
+                Map.of(
+                        EnemyType.DEMON, 1.6,
+                        EnemyType.YELLOW_EYED_DEMON, 1.6,
+                        EnemyType.LUCIFER, 1.3
                 )
         );
     }
 }
-

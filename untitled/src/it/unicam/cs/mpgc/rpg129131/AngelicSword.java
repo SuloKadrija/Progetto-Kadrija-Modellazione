@@ -5,11 +5,14 @@ import java.util.Map;
 public class AngelicSword extends Weapon {
 
     public AngelicSword() {
-        super("Stella del Mattino", 1.7, Map.of(
+        super(
+                "Stella del Mattino",
+                1.4,
+                Map.of(
                         EnemyType.LUCIFER, 2.0,
-                        EnemyType.LEVIATHAN, 1.8,
-                        EnemyType.ANGEL, 1.5,
-                        EnemyType.GOD, 1.3
+                        EnemyType.LEVIATHAN, 1.5,
+                        EnemyType.ANGEL, 1.2,
+                        EnemyType.GOD, 1.6
                 )
         );
     }

@@ -5,10 +5,13 @@ import java.util.Map;
 public class AngelicArrow extends Weapon {
 
     public AngelicArrow() {
-        super("Freccia angelica", 1.3, Map.of(
-                        EnemyType.ANGEL, 1.8,
-                        EnemyType.LEVIATHAN, 1.5,
-                        EnemyType.GOD, 1.2
+        super(
+                "Freccia angelica",
+                1.4,
+                Map.of(
+                        EnemyType.LEVIATHAN, 2.0,
+                        EnemyType.ANGEL, 1.5,
+                        EnemyType.GOD, 0.8
                 )
         );
     }
