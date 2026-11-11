@@ -50,10 +50,18 @@ public class MainMenuView extends StackPane {
 
         ImageView logo = new ImageView(logoImage);
         logo.setPreserveRatio(true);
+        logo.setSmooth(true);
+
         logo.fitWidthProperty().bind(
-                widthProperty().multiply(0.65)
+                widthProperty().multiply(0.88)
         );
-        logo.setFitHeight(220);
+
+        logo.fitHeightProperty().bind(
+                heightProperty().multiply(0.42)
+        );
+
+        StackPane logoContainer = new StackPane(logo);
+        logoContainer.setAlignment(Pos.CENTER);
 
         Button newGameButton = createButton(
                 "Nuova partita",
@@ -67,7 +75,19 @@ public class MainMenuView extends StackPane {
 
         continueButton.setDisable(!canContinue);
 
-        Button exitButton = createButton("Esci", onExit);
+        Button exitButton = createButton(
+                "Esci",
+                onExit
+        );
+
+        VBox buttons = new VBox(
+                18,
+                newGameButton,
+                continueButton,
+                exitButton
+        );
+
+        buttons.setAlignment(Pos.CENTER);
 
         Label note = new Label(
                 "Continua partita riprende la sessione aperta.\n"
@@ -75,30 +95,27 @@ public class MainMenuView extends StackPane {
         );
 
         note.setWrapText(true);
-        note.setMaxWidth(400);
+        note.setMaxWidth(380);
         note.setAlignment(Pos.CENTER);
+
         note.setStyle(
                 "-fx-text-fill: white;"
-                        + "-fx-font-size: 14px;"
+                        + "-fx-font-size: 12px;"
                         + "-fx-text-alignment: center;"
                         + "-fx-background-color: rgba(0, 0, 0, 0.65);"
-                        + "-fx-padding: 12px;"
+                        + "-fx-padding: 10px;"
                         + "-fx-background-radius: 10px;"
         );
 
-        VBox buttons = new VBox(
+        VBox content = new VBox(
                 24,
-                newGameButton,
-                continueButton,
-                exitButton,
+                logoContainer,
+                buttons,
                 note
         );
 
-        buttons.setAlignment(Pos.CENTER);
-
-        VBox content = new VBox(40, logo, buttons);
         content.setAlignment(Pos.CENTER);
-        content.setPadding(new Insets(30));
+        content.setPadding(new Insets(24));
 
         getChildren().add(content);
     }
@@ -106,25 +123,34 @@ public class MainMenuView extends StackPane {
     private Button createButton(String text, Runnable action) {
         Button button = new Button(text);
 
-        button.setPrefSize(300, 70);
+        button.setMinSize(240, 54);
+        button.setPrefSize(240, 54);
+        button.setMaxSize(240, 54);
 
         String normalStyle =
                 "-fx-background-color: #970000;"
                         + "-fx-text-fill: white;"
-                        + "-fx-font-size: 25px;"
-                        + "-fx-background-radius: 20px;"
+                        + "-fx-font-size: 21px;"
+                        + "-fx-background-radius: 16px;"
                         + "-fx-cursor: hand;";
 
         String hoverStyle =
                 "-fx-background-color: #bd1111;"
                         + "-fx-text-fill: white;"
-                        + "-fx-font-size: 25px;"
-                        + "-fx-background-radius: 20px;"
+                        + "-fx-font-size: 21px;"
+                        + "-fx-background-radius: 16px;"
                         + "-fx-cursor: hand;";
 
         button.setStyle(normalStyle);
-        button.setOnMouseEntered(event -> button.setStyle(hoverStyle));
-        button.setOnMouseExited(event -> button.setStyle(normalStyle));
+
+        button.setOnMouseEntered(
+                event -> button.setStyle(hoverStyle)
+        );
+
+        button.setOnMouseExited(
+                event -> button.setStyle(normalStyle)
+        );
+
         button.setOnAction(event -> action.run());
 
         return button;
