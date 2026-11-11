@@ -22,6 +22,7 @@ public class GameApplication extends Application {
     private TextArea eventArea;
     private Label statusLabel;
     private Button attackButton;
+    private Button enemyActionButton;
 
     @Override
     public void start(Stage stage) {
@@ -45,6 +46,10 @@ public class GameApplication extends Application {
         attackButton.setDisable(true);
         attackButton.setOnAction(event -> attack());
 
+        enemyActionButton = new Button("Prossima azione nemica");
+        enemyActionButton.setDisable(true);
+        enemyActionButton.setOnAction(event -> playEnemyAction());
+
         Button exitButton = new Button("Esci");
         exitButton.setOnAction(event -> stage.close());
 
@@ -54,6 +59,7 @@ public class GameApplication extends Application {
                 statusLabel,
                 newGameButton,
                 attackButton,
+                enemyActionButton,
                 eventArea,
                 exitButton
         );
@@ -63,11 +69,11 @@ public class GameApplication extends Application {
 
         VBox.setVgrow(eventArea, Priority.ALWAYS);
 
-        Scene scene = new Scene(root, 800, 600);
+        Scene scene = new Scene(root, 800, 650);
 
         stage.setTitle("Supernatural RPG");
         stage.setMinWidth(600);
-        stage.setMinHeight(500);
+        stage.setMinHeight(550);
         stage.setScene(scene);
         stage.show();
     }
@@ -117,7 +123,8 @@ public class GameApplication extends Application {
         List<String> targetNames = new ArrayList<>();
 
         for (Enemy enemy : targets) {
-            int enemyNumber = encounter.getEnemies().indexOf(enemy) + 1;
+            int enemyNumber =
+                    encounter.getEnemies().indexOf(enemy) + 1;
 
             targetNames.add(
                     enemy.getName()
@@ -165,6 +172,19 @@ public class GameApplication extends Application {
                 )
         );
 
+        updateControls();
+    }
+
+    private void playEnemyAction() {
+        if (session == null || session.isFinished()) {
+            return;
+        }
+
+        if (session.getCurrentHero() != null) {
+            return;
+        }
+
+        showEvents(session.playNextEnemyAction());
         updateControls();
     }
 
@@ -226,6 +246,7 @@ public class GameApplication extends Application {
 
     private void updateControls() {
         attackButton.setDisable(true);
+        enemyActionButton.setDisable(true);
 
         if (session == null) {
             statusLabel.setText("Premi Nuova partita per iniziare.");
@@ -241,9 +262,10 @@ public class GameApplication extends Application {
 
         if (hero == null) {
             statusLabel.setText(
-                    "Turno dei nemici. Il relativo comando "
-                            + "sarà aggiunto nel prossimo passaggio."
+                    "Turno dei nemici: premi Prossima azione nemica."
             );
+
+            enemyActionButton.setDisable(false);
             return;
         }
 
