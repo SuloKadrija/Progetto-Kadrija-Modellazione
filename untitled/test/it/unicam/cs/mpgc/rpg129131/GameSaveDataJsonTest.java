@@ -10,13 +10,26 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Verifica conversione JSON e vincoli strutturali dei record di salvataggio.
+ * Gli esempi ridotti non rappresentano necessariamente partite complete
+ * caricabili da GameSaveMapper.
+ */
 class GameSaveDataJsonTest {
 
+    /**
+     * Convertitore JSON rigoroso e formattato usato dai test dei record.
+     */
     private final Gson gson = new GsonBuilder()
             .setPrettyPrinting()
             .setStrictness(Strictness.STRICT)
             .create();
 
+    /**
+     * Crea un esempio ridotto destinato ai test della sola conversione JSON.
+     *
+     * @return dati dimostrativi, non una partita completa
+     */
     private GameSaveData createSampleData() {
         return new GameSaveData(
                 GameSaveData.CURRENT_VERSION,
@@ -47,6 +60,9 @@ class GameSaveDataJsonTest {
         );
     }
 
+    /**
+     * Verifica l’uguaglianza dei dati prima e dopo la conversione in JSON e la lettura.
+     */
     @Test
     void convertsDataToJsonAndBackWithoutLosingInformation() {
         GameSaveData original = createSampleData();
@@ -58,6 +74,9 @@ class GameSaveDataJsonTest {
         assertEquals(original, restored);
     }
 
+    /**
+     * Verifica che JSON conservi salute nemica zero e un inventario vuoto.
+     */
     @Test
     void preservesDefeatedEnemyAndEmptyInventory() {
         GameSaveData original = new GameSaveData(
@@ -93,6 +112,9 @@ class GameSaveDataJsonTest {
         );
     }
 
+    /**
+     * Verifica che il record rifiuti una versione di salvataggio non supportata.
+     */
     @Test
     void rejectsUnsupportedFormatVersion() {
         GameSaveData valid = createSampleData();
@@ -110,6 +132,9 @@ class GameSaveDataJsonTest {
         );
     }
 
+    /**
+     * Verifica che la salute assente, rappresentata da null, sia rifiutata.
+     */
     @Test
     void rejectsMissingHeroHealth() {
         assertThrows(
@@ -120,6 +145,9 @@ class GameSaveDataJsonTest {
         );
     }
 
+    /**
+     * Verifica che i dati di un incontro rifiutino una salute nemica negativa.
+     */
     @Test
     void rejectsNegativeEnemyHealth() {
         assertThrows(
@@ -130,6 +158,10 @@ class GameSaveDataJsonTest {
         );
     }
 
+    /**
+     * Verifica la copia della lista degli identificatori e l’impossibilità
+     * di modificarla attraverso il record.
+     */
     @Test
     void copiesInventoryList() {
         List<String> items = new ArrayList<>();

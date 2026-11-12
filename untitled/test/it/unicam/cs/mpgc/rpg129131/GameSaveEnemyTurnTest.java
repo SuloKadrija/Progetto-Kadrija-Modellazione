@@ -9,14 +9,34 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Verifica su file la ripresa della fase nemica a metà round e con
+ * un nemico già sconfitto. Riduce la salute di alcuni bersagli soltanto
+ * per preparare rapidamente gli scenari di test.
+ */
 class GameSaveEnemyTurnTest {
 
+    /**
+     * Cartella temporanea creata e ripulita da JUnit per isolare i file dei test.
+     */
     @TempDir
     Path directory;
 
+    /**
+     * Servizio di salvataggio sottoposto a verifica.
+     */
     private final GameSaveService service = new GameSaveService();
+    /**
+     * Convertitore usato per confrontare i dati prima e dopo il ripristino.
+     */
     private final GameSaveMapper mapper = new GameSaveMapper();
 
+    /**
+     * Raggiunge il primo incontro del secondo livello con due nemici.
+     * Riduce artificialmente la salute dei bersagli del primo livello per abbreviare il test.
+     *
+     * @return sessione attiva nel secondo livello
+     */
     private GameSession createSecondLevelSession() {
         GameSession session = new GameSession(
                 new GameFactory().create(),
@@ -46,6 +66,12 @@ class GameSaveEnemyTurnTest {
         return session;
     }
 
+    /**
+     * Prepara un bersaglio con un punto salute e lo sconfigge tramite un’azione reale.
+     * L’alterazione della salute serve solo ad abbreviare la preparazione del test.
+     *
+     * @param session sessione con un eroe corrente e un’arma efficace
+     */
     private void defeatFirstLivingEnemy(GameSession session) {
         Hero hero = session.getCurrentHero();
         assertNotNull(hero);
@@ -76,6 +102,12 @@ class GameSaveEnemyTurnTest {
         assertFalse(enemy.isAlive());
     }
 
+    /**
+     * Fa agire ogni eroe rimasto usando la sua pozione, dopo averlo ferito di un punto.
+     * Permette di entrare nella fase nemica senza uccidere altri nemici.
+     *
+     * @param session sessione attiva da portare alla fase nemica
+     */
     private void finishHeroPhaseUsingPotions(GameSession session) {
         Hero hero;
 
@@ -98,6 +130,13 @@ class GameSaveEnemyTurnTest {
         assertTrue(session.getTurnState().enemiesTurn());
     }
 
+    /**
+     * Verifica un solo evento di attacco e il ritorno alla fase degli eroi.
+     * Il conteggio dipende dalla formulazione attuale dei messaggi degli eventi.
+     *
+     * @param session sessione dopo l’azione nemica
+     * @param events eventi appena prodotti
+     */
     private void assertOneAttackAndNewRound(
             GameSession session,
             List<CombatEvent> events
@@ -112,6 +151,12 @@ class GameSaveEnemyTurnTest {
         assertNotNull(session.getCurrentHero());
     }
 
+    /**
+     * Salva dopo l’azione del primo nemico e verifica che il caricamento
+     * conservi l’indice del secondo, la cui azione conclude il round.
+     *
+     * @throws IOException se la preparazione o l’accesso ai file fallisce
+     */
     @Test
     void resumesAfterFirstEnemyWithoutRepeatingItsAction()
             throws IOException {
@@ -144,6 +189,12 @@ class GameSaveEnemyTurnTest {
         assertOneAttackAndNewRound(loaded, events);
     }
 
+    /**
+     * Salva con il primo nemico sconfitto e verifica che, dopo il caricamento,
+     * agisca soltanto quello ancora vivo prima dell’inizio del nuovo round.
+     *
+     * @throws IOException se la preparazione o l’accesso ai file fallisce
+     */
     @Test
     void skipsDefeatedEnemyAfterLoading()
             throws IOException {

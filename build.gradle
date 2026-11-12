@@ -1,27 +1,34 @@
+// Plugin per compilazione Java, esecuzione applicativa e integrazione JavaFX.
 plugins {
     id 'java'
     id 'application'
     id 'org.openjfx.javafxplugin' version '0.1.0'
 }
 
+// Coordinate identificative del progetto.
 group = 'it.unicam.cs.mpgc'
 version = '1.0-SNAPSHOT'
 
+// Repository pubblico dal quale Gradle risolve le dipendenze dichiarate.
 repositories {
     mavenCentral()
 }
 
+// Richiede un toolchain Java 25 per la compilazione.
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(25)
     }
 }
 
+// Versione JavaFX e modulo dei controlli usati dall’interfaccia.
 javafx {
     version = '25'
     modules = ['javafx.controls']
 }
 
+// Mantiene i percorsi sorgenti e test adottati dal progetto.
+// Le risorse non ridefinite conservano il percorso standard src/main/resources.
 sourceSets {
     main {
         java {
@@ -36,21 +43,27 @@ sourceSets {
     }
 }
 
+// Libreria JSON e dipendenze della suite di test JUnit Jupiter.
 dependencies {
+    // Dipendenza applicativa per conversione e lettura dei salvataggi JSON.
     implementation 'com.google.code.gson:gson:2.15.0'
+    // Allinea le versioni dei componenti JUnit mediante il BOM.
     testImplementation platform('org.junit:junit-bom:5.10.2')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+// Classe di ingresso avviata dal task run e dalle distribuzioni applicative.
 application {
     mainClass = 'it.unicam.cs.mpgc.rpg129131.Main'
 }
 
+// Compila i sorgenti come UTF-8 per conservare correttamente i caratteri accentati.
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
 
+// Esegue i test tramite JUnit Platform e mostra l’esito di ogni test.
 tasks.named('test') {
     useJUnitPlatform()
 
@@ -59,6 +72,7 @@ tasks.named('test') {
     }
 }
 
+// Collega l’input del terminale al processo, necessario nella modalità console.
 tasks.named('run') {
     standardInput = System.in
 }

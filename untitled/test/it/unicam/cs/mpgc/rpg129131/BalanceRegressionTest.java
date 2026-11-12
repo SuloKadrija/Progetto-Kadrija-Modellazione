@@ -7,10 +7,22 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Test di regressione delle statistiche e delle regole approvate del gioco.
+ * Controlla valori di eroi, nemici e armi, formula del danno, pozioni
+ * e progressione. Non dimostra da solo che la difficoltà percepita
+ * dal giocatore sia ottimale.
+ */
 public class BalanceRegressionTest {
 
+    /**
+     * Servizio usato per verificare danni e statistiche senza interfaccia.
+     */
     private final CombatService combatService = new CombatService();
 
+    /**
+     * Verifica salute iniziale, salute massima, attacco e difesa degli eroi rispetto ai valori approvati.
+     */
     @Test
     void heroStatisticsMatchApprovedRevision() {
         checkStatistics(new Sam(), 120, 24, 12);
@@ -20,6 +32,9 @@ public class BalanceRegressionTest {
         checkStatistics(new Jack(), 110, 27, 9);
     }
 
+    /**
+     * Verifica le statistiche iniziali dei nemici rispetto ai valori approvati.
+     */
     @Test
     void enemyStatisticsMatchApprovedRevision() {
         checkStatistics(new Ghost(), 180, 28, 8);
@@ -33,6 +48,9 @@ public class BalanceRegressionTest {
         checkStatistics(new God(), 600, 55, 20);
     }
 
+    /**
+     * Verifica i moltiplicatori base e le efficacie specifiche delle armi.
+     */
     @Test
     void weaponMultipliersMatchApprovedRevision() {
         Weapon[] weapons = {
@@ -81,6 +99,9 @@ public class BalanceRegressionTest {
         }
     }
 
+    /**
+     * Confronta i danni delle armi specializzate con i valori attesi per Sam e Dean.
+     */
     @Test
     void specialistDamageMatchesApprovedValues() {
         checkDamage(new Salt(), new Ghost(), 59, 56);
@@ -98,6 +119,9 @@ public class BalanceRegressionTest {
                 new Jack(), new Quote(), new God()));
     }
 
+    /**
+     * Verifica che l’arrotondamento del danno preceda la sottrazione della difesa.
+     */
     @Test
     void damageIsRoundedBeforeDefenseIsSubtracted() {
         Weapon weapon = new Weapon("Arma di prova", 1.0625, Map.of());
@@ -105,6 +129,9 @@ public class BalanceRegressionTest {
                 new Sam(), weapon, new Ghost()));
     }
 
+    /**
+     * Verifica che un attacco con efficacia positiva infligga almeno un punto di danno.
+     */
     @Test
     void effectiveAttackHasMinimumDamageOfOne() {
         Weapon weapon = new Weapon("Arma debole", 0.01, Map.of());
@@ -112,6 +139,9 @@ public class BalanceRegressionTest {
                 new Sam(), weapon, new God()));
     }
 
+    /**
+     * Verifica che Quote non infligga danni alle categorie diverse da GOD.
+     */
     @Test
     void quoteDealsZeroDamageToEveryNonGodEnemy() {
         List<Enemy> enemies = List.of(
@@ -126,6 +156,10 @@ public class BalanceRegressionTest {
         }
     }
 
+    /**
+     * Verifica che il danno restituito dall’attacco corrisponda alla perdita effettiva
+     * di salute e non superi quella disponibile nel bersaglio.
+     */
     @Test
     void actualDamageCannotExceedRemainingHealth() {
         Sam sam = new Sam();
@@ -139,6 +173,10 @@ public class BalanceRegressionTest {
         assertFalse(ghost.isAlive());
     }
 
+    /**
+     * Verifica che ogni preparazione dell’incontro assegni una sola pozione per eroe
+     * senza accumulare quelle rimaste dagli incontri precedenti.
+     */
     @Test
     void preparingEncounterGivesOnePotionToEveryHeroWithoutAccumulation() {
         Party party = new Party();
@@ -166,6 +204,10 @@ public class BalanceRegressionTest {
         assertTrue(heroes.get(0).getInventory().contains(weapon));
     }
 
+    /**
+     * Verifica il consumo della pozione dopo una cura riuscita e l’impossibilità
+     * di riutilizzare lo stesso oggetto rimosso.
+     */
     @Test
     void successfulHealingConsumesPotionAndPreventsReuse() {
         Sam sam = new Sam();
@@ -192,6 +234,9 @@ public class BalanceRegressionTest {
         assertEquals(0L, potionCount(sam));
     }
 
+    /**
+     * Verifica che una cura rifiutata a salute piena non consumi la pozione.
+     */
     @Test
     void fullHealthHeroDoesNotConsumePotion() {
         Sam sam = new Sam();
@@ -208,6 +253,9 @@ public class BalanceRegressionTest {
         assertTrue(sam.getInventory().contains(potion));
     }
 
+    /**
+     * Verifica che un eroe non possa passare il turno quando dispone ancora di un’azione.
+     */
     @Test
     void heroCannotSkipWhileAnActionIsAvailable() {
         GameSession session = newSession();
@@ -215,6 +263,10 @@ public class BalanceRegressionTest {
         assertThrows(IllegalStateException.class, session::skipCurrentHero);
     }
 
+    /**
+     * Verifica il recupero della salute e l’assegnazione della pozione entrando
+     * nell’incontro successivo dopo averne consumata una.
+     */
     @Test
     void nextEncounterRestoresPotionAndHealthAfterPotionWasUsed() {
         GameSession session = newSession();
@@ -253,6 +305,9 @@ public class BalanceRegressionTest {
         }
     }
 
+    /**
+     * Verifica che la sessione attraversi tutti gli incontri e rifiuti azioni dopo la conclusione.
+     */
     @Test
     void sessionCanCompleteAllEncountersAndRejectsFurtherActions() {
         GameSession session = newSession();
@@ -291,6 +346,11 @@ public class BalanceRegressionTest {
         assertThrows(IllegalStateException.class, session::playNextEnemyAction);
     }
 
+    /**
+     * Costruisce una nuova sessione non avviata per i test di regressione.
+     *
+     * @return sessione con stato e servizi indipendenti
+     */
     private GameSession newSession() {
         RoundManager manager = new RoundManager(new CombatService());
         return new GameSession(
@@ -300,11 +360,25 @@ public class BalanceRegressionTest {
         );
     }
 
+    /**
+     * Conta le pozioni senza modificare l’inventario.
+     *
+     * @param hero eroe da esaminare
+     * @return numero di pozioni presenti
+     */
     private long potionCount(Hero hero) {
         return hero.getInventory().getItems().stream()
                 .filter(Potion.class::isInstance).count();
     }
 
+    /**
+     * Raggruppa i confronti fra statistiche effettive e valori attesi.
+     *
+     * @param entity entità da controllare
+     * @param health salute iniziale e massima attesa
+     * @param attack attacco atteso
+     * @param defense difesa attesa
+     */
     private void checkStatistics(Entity entity, int health, int attack, int defense) {
         assertAll(entity.getName(),
                 () -> assertEquals(health, entity.getMaxHealth()),
@@ -314,6 +388,14 @@ public class BalanceRegressionTest {
         );
     }
 
+    /**
+     * Verifica il danno teorico della stessa arma con Sam e Dean.
+     *
+     * @param weapon arma da valutare
+     * @param enemy bersaglio da valutare
+     * @param sam danno atteso per Sam
+     * @param dean danno atteso per Dean
+     */
     private void checkDamage(Weapon weapon, Enemy enemy, int sam, int dean) {
         assertEquals(sam, combatService.calculateDamage(new Sam(), weapon, enemy),
                 "Sam / " + enemy.getName());

@@ -7,10 +7,23 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Verifica la conversione fra sessione e dati persistibili, l’indipendenza
+ * delle istanze ricostruite e alcuni rifiuti di dati incoerenti.
+ * Non usa il filesystem.
+ */
 class GameSaveMapperTest {
 
+    /**
+     * Convertitore usato per confrontare i dati prima e dopo il ripristino.
+     */
     private final GameSaveMapper mapper = new GameSaveMapper();
 
+    /**
+     * Costruisce una sessione indipendente e ne avvia la preparazione iniziale.
+     *
+     * @return nuova partita attiva
+     */
     private GameSession createStartedSession() {
         GameState state = new GameFactory().create();
 
@@ -26,6 +39,13 @@ class GameSaveMapperTest {
         return session;
     }
 
+    /**
+     * Crea una variante dei dati sostituendo soltanto l’elenco degli eroi.
+     *
+     * @param original dati di partenza
+     * @param heroes elenco sostitutivo, anche intenzionalmente non valido
+     * @return nuova struttura da passare al mapper
+     */
     private GameSaveData withHeroes(
             GameSaveData original,
             List<GameSaveData.HeroData> heroes
@@ -40,6 +60,12 @@ class GameSaveMapperTest {
         );
     }
 
+    /**
+     * Sconfigge il primo nemico vivo con un attacco efficace dopo avergli assegnato
+     * un punto salute. Nei casi preparati viene usato sugli incontri con un solo nemico.
+     *
+     * @param session sessione da far avanzare
+     */
     private void winCurrentEncounter(GameSession session) {
         Encounter encounter =
                 session.getGameState().getCurrentEncounter();
@@ -70,6 +96,9 @@ class GameSaveMapperTest {
         );
     }
 
+    /**
+     * Verifica l’uguaglianza dei dati e l’indipendenza dello stato e degli eroi ricostruiti.
+     */
     @Test
     void restoresInitialSessionIntoIndependentObjects() {
         GameSession original = createStartedSession();
@@ -95,6 +124,10 @@ class GameSaveMapperTest {
         );
     }
 
+    /**
+     * Verifica che il ripristino non restituisca una pozione consumata
+     * e conservi l’eroe successivo che deve agire.
+     */
     @Test
     void preservesConsumedPotionAndNextHeroTurn() {
         GameSession original = createStartedSession();
@@ -131,6 +164,10 @@ class GameSaveMapperTest {
         );
     }
 
+    /**
+     * Verifica il ripristino del secondo livello e l’identità condivisa di Sam
+     * nei gruppi dei diversi livelli della nuova partita.
+     */
     @Test
     void restoresSecondLevelAndKeepsSharedHeroes() {
         GameSession original = createStartedSession();
@@ -162,6 +199,9 @@ class GameSaveMapperTest {
         assertSame(firstLevelSam, secondLevelSam);
     }
 
+    /**
+     * Verifica il rifiuto di due dati salvati con lo stesso identificatore di eroe.
+     */
     @Test
     void rejectsDuplicateHero() {
         GameSaveData saved =
@@ -178,6 +218,9 @@ class GameSaveMapperTest {
         );
     }
 
+    /**
+     * Verifica che il mapper rifiuti una salute superiore al massimo previsto dall’eroe.
+     */
     @Test
     void rejectsHeroHealthAboveMaximum() {
         GameSession session = createStartedSession();
@@ -201,6 +244,9 @@ class GameSaveMapperTest {
         );
     }
 
+    /**
+     * Verifica il rifiuto di un identificatore di oggetto non riconosciuto.
+     */
     @Test
     void rejectsUnknownItem() {
         GameSaveData saved =
@@ -224,6 +270,9 @@ class GameSaveMapperTest {
         );
     }
 
+    /**
+     * Verifica che il mapper richieda anche gli incontri non correnti.
+     */
     @Test
     void rejectsMissingEncounter() {
         GameSaveData saved =

@@ -11,17 +11,36 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Verifica scrittura e lettura JSON su file temporanei, sovrascrittura
+ * e gestione di errori di sintassi o validazione. Non modifica
+ * il salvataggio personale nella cartella saves.
+ */
 class GameSaveServiceTest {
 
+    /**
+     * Cartella temporanea creata e ripulita da JUnit per isolare i file dei test.
+     */
     @TempDir
     Path directory;
 
+    /**
+     * Servizio di salvataggio sottoposto a verifica.
+     */
     private final GameSaveService service =
             new GameSaveService();
 
+    /**
+     * Convertitore usato per confrontare i dati prima e dopo il ripristino.
+     */
     private final GameSaveMapper mapper =
             new GameSaveMapper();
 
+    /**
+     * Costruisce una sessione indipendente ma non ancora avviata.
+     *
+     * @return sessione senza preparazione iniziale
+     */
     private GameSession createSession() {
         return new GameSession(
                 new GameFactory().create(),
@@ -32,23 +51,48 @@ class GameSaveServiceTest {
         );
     }
 
+    /**
+     * Costruisce una sessione indipendente e ne avvia la preparazione iniziale.
+     *
+     * @return nuova partita attiva
+     */
     private GameSession createStartedSession() {
         GameSession session = createSession();
         session.startNewGame();
         return session;
     }
 
+    /**
+     * Legge il file di prova come albero JSON per modificarne campi specifici.
+     *
+     * @param file file creato dal test
+     * @return oggetto JSON del salvataggio
+     * @throws IOException se la lettura fallisce
+     */
     private JsonObject readJson(Path file) throws IOException {
         return JsonParser.parseString(
                 Files.readString(file)
         ).getAsJsonObject();
     }
 
+    /**
+     * Scrive il JSON modificato per preparare un caso di errore del caricamento.
+     *
+     * @param file destinazione temporanea
+     * @param json contenuto da scrivere
+     * @throws IOException se la scrittura fallisce
+     */
     private void writeJson(Path file, JsonObject json)
             throws IOException {
         Files.writeString(file, json.toString());
     }
 
+    /**
+     * Verifica il percorso completo sessione, file JSON e nuova sessione
+     * conservando danno, turno e consumo della pozione.
+     *
+     * @throws IOException se la preparazione o l’accesso ai file fallisce
+     */
     @Test
     void savesAndLoadsIndependentSession() throws IOException {
         GameSession original = createStartedSession();
@@ -97,6 +141,11 @@ class GameSaveServiceTest {
         );
     }
 
+    /**
+     * Verifica che il servizio crei la cartella di destinazione quando manca.
+     *
+     * @throws IOException se la preparazione o l’accesso ai file fallisce
+     */
     @Test
     void createsMissingSaveDirectory() throws IOException {
         Path file = directory
@@ -109,6 +158,11 @@ class GameSaveServiceTest {
         assertNotNull(service.load(file));
     }
 
+    /**
+     * Verifica che un secondo salvataggio sullo stesso percorso aggiorni i dati caricabili.
+     *
+     * @throws IOException se la preparazione o l’accesso ai file fallisce
+     */
     @Test
     void replacesExistingSave() throws IOException {
         GameSession session = createStartedSession();
@@ -124,6 +178,9 @@ class GameSaveServiceTest {
         assertEquals(1, loaded.getCurrentHero().getHealth());
     }
 
+    /**
+     * Verifica che il caricamento di un file inesistente segnali un errore di input/output.
+     */
     @Test
     void rejectsMissingFile() {
         Path file = directory.resolve("inesistente.json");
@@ -134,6 +191,11 @@ class GameSaveServiceTest {
         );
     }
 
+    /**
+     * Verifica che un file con sintassi JSON non valida venga rifiutato.
+     *
+     * @throws IOException se la preparazione o l’accesso ai file fallisce
+     */
     @Test
     void rejectsMalformedJson() throws IOException {
         Path file = directory.resolve("corrotto.json");
@@ -145,6 +207,11 @@ class GameSaveServiceTest {
         );
     }
 
+    /**
+     * Verifica che un file vuoto non venga interpretato come una partita valida.
+     *
+     * @throws IOException se la preparazione o l’accesso ai file fallisce
+     */
     @Test
     void rejectsEmptyFile() throws IOException {
         Path file = directory.resolve("vuoto.json");
@@ -156,6 +223,11 @@ class GameSaveServiceTest {
         );
     }
 
+    /**
+     * Verifica che l’assenza di heroIndex non venga trasformata silenziosamente in zero.
+     *
+     * @throws IOException se la preparazione o l’accesso ai file fallisce
+     */
     @Test
     void rejectsMissingTurnField() throws IOException {
         Path file = directory.resolve("partita.json");
@@ -171,6 +243,11 @@ class GameSaveServiceTest {
         );
     }
 
+    /**
+     * Verifica il rifiuto di un indice del turno con parte frazionaria.
+     *
+     * @throws IOException se la preparazione o l’accesso ai file fallisce
+     */
     @Test
     void rejectsFractionalTurnIndex() throws IOException {
         Path file = directory.resolve("partita.json");
@@ -187,6 +264,11 @@ class GameSaveServiceTest {
         );
     }
 
+    /**
+     * Verifica che il caricamento da file rifiuti una versione del formato sconosciuta.
+     *
+     * @throws IOException se la preparazione o l’accesso ai file fallisce
+     */
     @Test
     void rejectsUnsupportedVersion() throws IOException {
         Path file = directory.resolve("partita.json");
@@ -202,6 +284,12 @@ class GameSaveServiceTest {
         );
     }
 
+    /**
+     * Verifica che una sessione non avviata sia rifiutata prima della scrittura
+     * e che il contenuto del salvataggio precedente rimanga invariato.
+     *
+     * @throws IOException se la preparazione o l’accesso ai file fallisce
+     */
     @Test
     void failedValidationDoesNotOverwritePreviousSave()
             throws IOException {
