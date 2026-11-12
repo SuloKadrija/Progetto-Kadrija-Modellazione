@@ -27,21 +27,6 @@ javafx {
     modules = ['javafx.controls']
 }
 
-// Mantiene i percorsi sorgenti e test adottati dal progetto.
-// Le risorse non ridefinite conservano il percorso standard src/main/resources.
-sourceSets {
-    main {
-        java {
-            srcDirs = ['untitled/src']
-        }
-    }
-
-    test {
-        java {
-            srcDirs = ['untitled/test']
-        }
-    }
-}
 
 // Libreria JSON e dipendenze della suite di test JUnit Jupiter.
 dependencies {
