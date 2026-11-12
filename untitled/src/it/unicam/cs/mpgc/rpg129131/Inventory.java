@@ -22,6 +22,23 @@ public class Inventory {
         return items.remove(item);
     }
 
+    public void restoreItems(List<Item> savedItems) {
+        if (savedItems == null) {
+            throw new IllegalArgumentException("La lista degli oggetti salvati non può essere null.");
+        }
+
+        List<Item> restoredItems = new ArrayList<>(savedItems);
+
+        for (Item item : restoredItems) {
+            if (item == null) {
+                throw new IllegalArgumentException("La lista degli oggetti salvati " + "non può contenere null.");
+            }
+        }
+
+        items.clear();
+        items.addAll(restoredItems);
+    }
+
     public List<Item> getItems() {
         return Collections.unmodifiableList(items);
     }
