@@ -6,8 +6,27 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Converte una sessione attiva in dati di salvataggio e ricostruisce
+ * una nuova sessione a partire da quei dati. Non gestisce JSON o filesystem.
+ * Durante il ripristino ricrea la struttura con GameFactory e controlla
+ * identificatori, salute, sblocchi, progressione e turno.
+ * Gli identificatori di eroi e oggetti coincidono con i nomi semplici
+ * delle classi: rinomine e cambiamenti strutturali richiedono attenzione
+ * alla compatibilità dei salvataggi. Il generatore casuale viene ricreato.
+ */
 public class GameSaveMapper {
 
+    /**
+     * Estrae i dati da una sessione attiva senza modificarla.
+     * Registra ogni eroe una sola volta e include tutti gli incontri,
+     * anche quelli precedenti e futuri.
+     *
+     * @param session partita attiva da convertire
+     * @return fotografia dei dati da serializzare
+     * @throws IllegalArgumentException se la sessione è null
+     * @throws IllegalStateException se la sessione non è attiva o esistono eroi distinti con lo stesso identificatore
+     */
     public GameSaveData toSaveData(GameSession session) {
         if (session == null) {
             throw new IllegalArgumentException(
@@ -79,6 +98,17 @@ public class GameSaveMapper {
         );
     }
 
+    /**
+     * Ricostruisce una nuova partita indipendente applicando i dati salvati.
+     * Ripristina prima posizione, eroi e nemici, verifica la progressione
+     * e infine ripristina il turno senza chiamare startNewGame.
+     * Se un controllo fallisce, la nuova sessione non viene restituita.
+     *
+     * @param data dati del salvataggio già costruiti
+     * @return nuova sessione avviata e pronta a proseguire
+     * @throws IllegalArgumentException se i dati sono null, incompleti o incoerenti
+     * @throws IllegalStateException se lo stato finale non consente di riprendere il turno
+     */
     public GameSession fromSaveData(GameSaveData data) {
         if (data == null) {
             throw new IllegalArgumentException(
@@ -86,6 +116,7 @@ public class GameSaveMapper {
             );
         }
 
+        // La factory mantiene i riferimenti condivisi degli eroi fra i diversi gruppi.
         GameState state = new GameFactory().create();
 
         state.restorePosition(
@@ -106,11 +137,21 @@ public class GameSaveMapper {
                 new LevelPreparation()
         );
 
+        // Ripristina il turno per ultimo: non rigenera armi, pozioni o salute.
         session.restoreTurnState(data.turn());
 
         return session;
     }
 
+    /**
+     * Raccoglie gli eroi per identificatore mantenendo l’ordine di prima comparsa.
+     * Riferimenti ripetuti allo stesso eroe sono ammessi; due istanze distinte
+     * con lo stesso identificatore vengono rifiutate.
+     *
+     * @param state stato dal quale attraversare gruppi e incontri
+     * @return mappa degli eroi senza duplicare le istanze condivise
+     * @throws IllegalStateException se l’identificatore non individua un’unica istanza
+     */
     private Map<String, Hero> collectHeroes(GameState state) {
         Map<String, Hero> heroes = new LinkedHashMap<>();
 
@@ -132,6 +173,15 @@ public class GameSaveMapper {
         return heroes;
     }
 
+    /**
+     * Richiede esattamente gli eroi previsti dalla factory, senza duplicati.
+     * Ripristina salute, sblocco coerente con il livello e inventario.
+     * La struttura modificata è quella nuova costruita per il caricamento.
+     *
+     * @param state nuovo stato di gioco con posizione già ripristinata
+     * @param savedHeroes dati di tutti gli eroi
+     * @throws IllegalArgumentException se eroi, sblocchi, saluti o oggetti non sono validi
+     */
     private void restoreHeroes(
             GameState state,
             List<GameSaveData.HeroData> savedHeroes
@@ -186,6 +236,15 @@ public class GameSaveMapper {
         }
     }
 
+    /**
+     * Determina lo sblocco atteso dalla presenza dell’eroe nei livelli
+     * raggiunti fino a quello corrente, compreso. Un eroe già sbloccato
+     * resta tale anche se non appartiene al gruppo del livello attuale.
+     *
+     * @param state stato con posizione corrente valida
+     * @param hero istanza dell’eroe da cercare
+     * @return true se l’eroe compare in un livello già raggiunto
+     */
     private boolean shouldBeUnlocked(
             GameState state,
             Hero hero
@@ -202,6 +261,15 @@ public class GameSaveMapper {
         return false;
     }
 
+    /**
+     * Ricostruisce un oggetto usando esclusivamente gli identificatori riconosciuti.
+     * Non carica classi arbitrarie dal testo del salvataggio. Per supportare
+     * un nuovo tipo di oggetto bisogna aggiornare anche questa selezione.
+     *
+     * @param id nome semplice della classe dell’oggetto
+     * @return nuova istanza dell’oggetto
+     * @throws IllegalArgumentException se l’identificatore è sconosciuto
+     */
     private Item createItem(String id) {
         return switch (id) {
             case "Knife" -> new Knife();
@@ -223,6 +291,14 @@ public class GameSaveMapper {
         };
     }
 
+    /**
+     * Indicizza gli incontri salvati e richiede tutte e sole le posizioni previste.
+     * Verifica il numero dei nemici e ne ripristina la salute nello stesso ordine.
+     *
+     * @param state nuova struttura degli incontri
+     * @param savedEncounters dati di tutti gli incontri
+     * @throws IllegalArgumentException se posizioni, quantità o saluti sono incoerenti
+     */
     private void restoreEncounters(
             GameState state,
             List<GameSaveData.EncounterData> savedEncounters
@@ -254,6 +330,7 @@ public class GameSaveMapper {
                  encounterIndex < encounters.size();
                  encounterIndex++) {
 
+                // La rimozione permette di rilevare alla fine anche incontri estranei.
                 String key = levelIndex + ":" + encounterIndex;
 
                 GameSaveData.EncounterData saved =
@@ -290,6 +367,14 @@ public class GameSaveMapper {
         }
     }
 
+    /**
+     * Richiede incontri precedenti completati, incontro corrente non completato
+     * e nemici futuri ancora a salute massima. Non prova che ogni dettaglio
+     * dell’inventario sia raggiungibile attraverso una partita realmente giocata.
+     *
+     * @param state stato dopo il ripristino di posizione e saluti
+     * @throws IllegalArgumentException se la progressione degli incontri è incoerente
+     */
     private void validateProgress(GameState state) {
         List<Level> levels = state.getLevels();
 

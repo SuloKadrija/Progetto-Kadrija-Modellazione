@@ -13,15 +13,41 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
+/**
+ * Gestisce lettura e scrittura dei salvataggi JSON in UTF-8.
+ * Delega al mapper la conversione e i controlli relativi al gioco.
+ * Prima di sostituire il file di destinazione scrive un file temporaneo;
+ * tenta uno spostamento atomico e, se non supportato, uno normale.
+ * Non mostra finestre e non sostituisce la sessione dell’interfaccia.
+ */
 public class GameSaveService {
 
+    /**
+     * Converte e valida lo stato del gioco, senza occuparsi dei file.
+     */
     private final GameSaveMapper mapper = new GameSaveMapper();
 
+    /**
+     * Serializzatore JSON con formattazione leggibile e sintassi rigorosa.
+     * La correttezza del dominio viene verificata separatamente dal mapper.
+     */
     private final Gson gson = new GsonBuilder()
             .setPrettyPrinting()
             .setStrictness(Strictness.STRICT)
             .create();
 
+    /**
+     * Valida la sessione e scrive il salvataggio sul percorso indicato.
+     * Prima di operare sui file verifica anche che i dati siano ricostruibili.
+     * Crea le cartelle mancanti, scrive un temporaneo nella stessa cartella
+     * e sostituisce la destinazione. Se lo spostamento atomico non è supportato,
+     * il ripiego normale non offre la stessa garanzia di atomicità.
+     *
+     * @param file percorso del salvataggio, anche relativo alla directory di lavoro
+     * @param session partita attiva da salvare
+     * @throws IllegalArgumentException se il percorso è null
+     * @throws IOException se lo stato non è salvabile o un’operazione sui file fallisce
+     */
     public void save(Path file, GameSession session)
             throws IOException {
 
@@ -47,6 +73,7 @@ public class GameSaveService {
             );
         }
 
+        // I percorsi relativi vengono risolti rispetto alla directory di lavoro.
         Path target = file.toAbsolutePath().normalize();
         Path parent = target.getParent();
 
@@ -80,10 +107,21 @@ public class GameSaveService {
                 );
             }
         } finally {
+            // Dopo lo spostamento il temporaneo non esiste più; in caso di errore lo elimina.
             Files.deleteIfExists(temporary);
         }
     }
 
+    /**
+     * Legge il JSON, controlla i campi primitivi del turno e ricostruisce la partita.
+     * Restituisce una nuova sessione senza modificare quella eventualmente aperta.
+     * Il chiamante decide se e quando sostituire la propria sessione.
+     *
+     * @param file percorso del salvataggio da leggere
+     * @return sessione indipendente ripristinata
+     * @throws IllegalArgumentException se il percorso è null
+     * @throws IOException se lettura, sintassi JSON o dati della partita non sono validi
+     */
     public GameSession load(Path file) throws IOException {
         if (file == null) {
             throw new IllegalArgumentException(
@@ -124,6 +162,14 @@ public class GameSaveService {
         }
     }
 
+    /**
+     * Verifica che il turno sia un oggetto con fase booleana e indici interi.
+     * È necessario perché i componenti primitivi di TurnState non distinguono
+     * un valore mancante dai valori predefiniti zero e false.
+     *
+     * @param root oggetto JSON principale del salvataggio
+     * @throws IllegalArgumentException se un campo obbligatorio del turno non è valido
+     */
     private void validateTurnFields(JsonObject root) {
         JsonElement turnElement = root.get("turn");
 
@@ -148,6 +194,15 @@ public class GameSaveService {
         requireInteger(turn, "enemyIndex");
     }
 
+    /**
+     * Richiede un valore JSON numerico rappresentabile esattamente come int.
+     * Rifiuta stringhe numeriche, valori frazionari e numeri fuori intervallo.
+     * La non negatività è controllata successivamente da TurnState.
+     *
+     * @param object oggetto che deve contenere il campo
+     * @param field nome del campo da verificare
+     * @throws IllegalArgumentException se il campo manca o non rappresenta un intero valido
+     */
     private void requireInteger(
             JsonObject object,
             String field
