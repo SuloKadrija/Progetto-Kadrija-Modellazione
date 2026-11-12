@@ -42,6 +42,14 @@ public abstract class Entity {
         return health;
     }
 
+    public void restoreHealth(int savedHealth) {
+        if (savedHealth < 0 || savedHealth > maxHealth) {
+            throw new IllegalArgumentException("La salute salvata deve essere compresa tra 0 e " + maxHealth + ".");
+        }
+
+        this.health = savedHealth;
+    }
+
     public int getMaxHealth() {
         return maxHealth;
     }
