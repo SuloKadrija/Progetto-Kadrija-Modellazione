@@ -206,6 +206,70 @@ public class GameSession {
         return started;
     }
 
+    public TurnState getTurnState() {
+        requireActiveGame();
+
+        return new TurnState(
+                enemiesTurn,
+                heroIndex,
+                enemyIndex
+        );
+    }
+
+    public void restoreTurnState(TurnState savedTurn) {
+        if (savedTurn == null) {
+            throw new IllegalArgumentException("Lo stato del turno non può essere null.");
+        }
+
+        if (started) {
+            throw new IllegalStateException("Il ripristino richiede una sessione non ancora avviata.");
+        }
+
+        if (isFinished()) {
+            throw new IllegalStateException("Non è possibile riprendere una partita terminata.");
+        }
+
+        Encounter encounter = gameState.getCurrentEncounter();
+        List<Hero> heroes = encounter.getParty().getMembers();
+        List<Enemy> enemies = encounter.getEnemies();
+
+        if (savedTurn.enemiesTurn()) {
+            if (savedTurn.heroIndex() != heroes.size()) {
+                throw new IllegalArgumentException("Nel turno dei nemici tutti gli eroi devono avere concluso il turno.");
+            }
+
+            if (savedTurn.enemyIndex() >= enemies.size()) {
+                throw new IllegalArgumentException("L'indice del nemico salvato non è valido.");
+            }
+
+            boolean hasNextLivingEnemy = false;
+
+            for (int i = savedTurn.enemyIndex(); i < enemies.size(); i++) {
+                if (enemies.get(i).isAlive()) {
+                    hasNextLivingEnemy = true;
+                    break;
+                }
+            }
+
+            if (!hasNextLivingEnemy) {
+                throw new IllegalArgumentException("Non ci sono nemici vivi che debbano ancora agire.");
+            }
+        } else {
+            if (savedTurn.heroIndex() >= heroes.size() || !heroes.get(savedTurn.heroIndex()).isAlive()) {
+                throw new IllegalArgumentException("L'eroe del turno salvato non è valido o è sconfitto.");
+            }
+
+            if (savedTurn.enemyIndex() != 0) {
+                throw new IllegalArgumentException("Nel turno degli eroi l'indice del nemico deve essere zero.");
+            }
+        }
+
+        enemiesTurn = savedTurn.enemiesTurn();
+        heroIndex = savedTurn.heroIndex();
+        enemyIndex = savedTurn.enemyIndex();
+        started = true;
+    }
+
     public boolean isFinished() {
         return gameState.isGameCompleted()
                 || gameState.isGameOver();
