@@ -16,8 +16,26 @@ import javafx.scene.layout.BackgroundSize;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
+/**
+ * Costruisce il menu principale con immagini, pulsanti e istruzioni.
+ * Riceve stato dei pulsanti e callback dall’applicazione: non crea partite,
+ * non interpreta salvataggi e non gestisce direttamente i turni.
+ */
 public class MainMenuView extends StackPane {
 
+    /**
+     * Costruisce sfondo, personaggi, logo, pulsanti e istruzioni del menu.
+     * Il menu usa i valori ricevuti alla costruzione; l’applicazione lo ricrea
+     * quando deve mostrare uno stato aggiornato.
+     *
+     * @param canContinue abilita la ripresa della sessione in memoria
+     * @param canLoad abilita il tentativo di caricamento da file
+     * @param onNewGame operazione associata a Nuova partita
+     * @param onContinue operazione associata a Continua partita
+     * @param onLoad operazione associata a Carica partita
+     * @param onExit operazione associata a Esci
+     * @throws IllegalStateException se una risorsa grafica non è disponibile
+     */
     public MainMenuView(
             boolean canContinue,
             boolean canLoad,
@@ -26,6 +44,7 @@ public class MainMenuView extends StackPane {
             Runnable onLoad,
             Runnable onExit
     ) {
+        // Le risorse sono incluse nel classpath dell’applicazione.
         Image backgroundImage = loadImage("/images/Sfondo.png");
         Image logoImage = loadImage("/images/Logo.png");
 
@@ -81,6 +100,7 @@ public class MainMenuView extends StackPane {
         StackPane logoContainer = new StackPane(logo);
         logoContainer.setAlignment(Pos.CENTER);
 
+        // Le operazioni sono fornite da GameApplication tramite callback.
         Button newGameButton = createButton(
                 "Nuova partita",
                 onNewGame
@@ -152,6 +172,14 @@ public class MainMenuView extends StackPane {
         );
     }
 
+    /**
+     * Crea l’immagine di un personaggio e ne lega le dimensioni a quelle del menu.
+     * L’immagine non intercetta il mouse, così non blocca i controlli sovrapposti.
+     *
+     * @param path percorso della risorsa nel classpath
+     * @return vista del personaggio con proporzioni conservate
+     * @throws IllegalStateException se l’immagine non è caricabile
+     */
     private ImageView createCharacter(String path) {
         ImageView character = new ImageView(loadImage(path));
 
@@ -170,6 +198,14 @@ public class MainMenuView extends StackPane {
         return character;
     }
 
+    /**
+     * Crea un pulsante con dimensioni uniformi, stile normale e al passaggio del mouse.
+     * Il clic esegue la callback ricevuta senza implementarne qui la logica.
+     *
+     * @param text etichetta del pulsante
+     * @param action operazione da eseguire al clic
+     * @return pulsante configurato
+     */
     private Button createButton(String text, Runnable action) {
         Button button = new Button(text);
 
@@ -206,6 +242,13 @@ public class MainMenuView extends StackPane {
         return button;
     }
 
+    /**
+     * Carica una risorsa grafica dal classpath, non da un percorso del filesystem.
+     *
+     * @param path percorso della risorsa, ad esempio /images/Logo.png
+     * @return immagine caricata
+     * @throws IllegalStateException se la risorsa manca o presenta un errore di lettura
+     */
     private Image loadImage(String path) {
         URL resource = MainMenuView.class.getResource(path);
 

@@ -4,10 +4,25 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
+/**
+ * Implementa input e output testuali del contratto GameView.
+ * Mostra stato ed eventi e costruisce le richieste di azione dalle scelte
+ * dell’utente, senza applicare direttamente danni o cure.
+ * La modalità console non espone comandi di persistenza.
+ */
 public class ConsoleGameView implements GameView {
 
+    /**
+     * Scanner fornito dal chiamante per leggere le scelte dalla console.
+     */
     private final Scanner scanner;
 
+    /**
+     * Collega la vista allo Scanner fornito. Il suo ciclo di vita è gestito dal chiamante.
+     *
+     * @param scanner sorgente delle scelte testuali
+     * @throws IllegalArgumentException se lo Scanner è null
+     */
     public ConsoleGameView(Scanner scanner) {
         if (scanner == null) {
             throw new IllegalArgumentException(
@@ -18,11 +33,23 @@ public class ConsoleGameView implements GameView {
         this.scanner = scanner;
     }
 
+    /**
+     * Scrive un messaggio seguito da un ritorno a capo.
+     *
+     * @param message testo da visualizzare
+     */
     @Override
     public void showMessage(String message) {
         System.out.println(message);
     }
 
+    /**
+     * Mostra livello, numero dell’incontro, salute e sconfitte dei partecipanti.
+     *
+     * @param level identificatore del livello corrente
+     * @param encounterNumber numero da mostrare, normalmente con numerazione da uno
+     * @param encounter incontro da visualizzare
+     */
     @Override
     public void showStatus(
             LevelNumber level,
@@ -68,6 +95,15 @@ public class ConsoleGameView implements GameView {
         }
     }
 
+    /**
+     * Mostra le azioni disponibili e legge le scelte necessarie per costruirne una.
+     * Non esegue l’azione: la richiesta viene restituita al ciclo del gioco.
+     *
+     * @param hero eroe corrente
+     * @param encounter incontro corrente
+     * @return richiesta di attacco o cura, oppure null se non esistono azioni
+     * @throws IllegalStateException se l’input termina durante una scelta
+     */
     @Override
     public HeroAction readAction(Hero hero, Encounter encounter) {
         System.out.println("\nTurno di " + hero.getName());
@@ -109,6 +145,11 @@ public class ConsoleGameView implements GameView {
         return new AttackAction(hero, weapon, target);
     }
 
+    /**
+     * Stampa in ordine i messaggi degli eventi; una lista vuota non produce output.
+     *
+     * @param events eventi da visualizzare
+     */
     @Override
     public void showEvents(List<CombatEvent> events) {
         if (events.isEmpty()) {
@@ -122,6 +163,13 @@ public class ConsoleGameView implements GameView {
         }
     }
 
+    /**
+     * Individua nemici vivi attaccabili con almeno un’arma efficace posseduta.
+     *
+     * @param hero eroe da valutare
+     * @param encounter incontro corrente
+     * @return lista dei bersagli selezionabili
+     */
     private List<Enemy> getAvailableTargets(
             Hero hero,
             Encounter encounter
@@ -138,6 +186,13 @@ public class ConsoleGameView implements GameView {
         return targets;
     }
 
+    /**
+     * Seleziona le armi dell’eroe con efficacia positiva sul bersaglio.
+     *
+     * @param hero proprietario dell’inventario
+     * @param target nemico da valutare
+     * @return armi utilizzabili nell’ordine dell’inventario
+     */
     private List<Weapon> getUsableWeapons(
             Hero hero,
             Enemy target
@@ -154,6 +209,12 @@ public class ConsoleGameView implements GameView {
         return weapons;
     }
 
+    /**
+     * Seleziona le pozioni presenti nell’inventario.
+     *
+     * @param hero eroe da valutare
+     * @return pozioni possedute
+     */
     private List<Potion> getPotions(Hero hero) {
         List<Potion> potions = new ArrayList<>();
 
@@ -166,6 +227,15 @@ public class ConsoleGameView implements GameView {
         return potions;
     }
 
+    /**
+     * Stampa i bersagli disponibili e legge la scelta.
+     * Il numero della scelta è distinto dall’identificatore mostrato nell’incontro.
+     *
+     * @param targets bersagli selezionabili, lista non vuota
+     * @param encounter incontro dal quale ricavare i numeri originali dei nemici
+     * @return nemico selezionato
+     * @throws IllegalStateException se l’input termina
+     */
     private Enemy chooseTarget(
             List<Enemy> targets,
             Encounter encounter
@@ -194,6 +264,13 @@ public class ConsoleGameView implements GameView {
         return targets.get(readChoice(targets.size()) - 1);
     }
 
+    /**
+     * Stampa le armi disponibili e legge una scelta valida.
+     *
+     * @param weapons armi selezionabili, lista non vuota
+     * @return arma selezionata
+     * @throws IllegalStateException se l’input termina
+     */
     private Weapon chooseWeapon(List<Weapon> weapons) {
         System.out.println("Scegli l'arma:");
 
@@ -206,6 +283,15 @@ public class ConsoleGameView implements GameView {
         return weapons.get(readChoice(weapons.size()) - 1);
     }
 
+    /**
+     * Legge un intero tra uno e il massimo, ripetendo la richiesta in caso di errore.
+     * Consuma i token non interi per evitare di rileggere indefinitamente lo stesso input.
+     *
+     * @param max massimo valore accettato, almeno uno
+     * @return scelta valida nell’intervallo inclusivo 1..max
+     * @throws IllegalArgumentException se max è minore di uno
+     * @throws IllegalStateException se non esiste più input da leggere
+     */
     private int readChoice(int max) {
         if (max < 1) {
             throw new IllegalArgumentException(
@@ -229,6 +315,7 @@ public class ConsoleGameView implements GameView {
                     return choice;
                 }
             } else {
+                // Scarta il token non numerico prima di riproporre la scelta.
                 scanner.next();
             }
 

@@ -23,33 +23,90 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
+/**
+ * Implementa l’interfaccia JavaFX e collega i comandi del giocatore alla sessione.
+ * Gestisce schermate, finestre di dialogo e ritardo fra gli attacchi nemici.
+ * Delega regole e avanzamento a GameSession e persistenza a GameSaveService.
+ * Le operazioni sui file sono eseguite sincronicamente dai gestori JavaFX.
+ */
 public class GameApplication extends Application {
 
+    /**
+     * Servizio per leggere e scrivere la partita sul disco.
+     */
     private final GameSaveService saveService =
             new GameSaveService();
 
+    /**
+     * Unico slot di salvataggio, relativo alla directory di avvio del programma.
+     */
     private final Path saveFile =
             Path.of("saves", "partita.json");
 
+    /**
+     * Attesa di 0,7 secondi prima di eseguire una singola azione nemica.
+     */
     private final PauseTransition enemyPause =
             new PauseTransition(Duration.seconds(0.7));
 
+    /**
+     * Sessione corrente; null prima di avvio o caricamento.
+     */
     private GameSession session;
+    /**
+     * Finestra principale, proprietaria dei dialoghi.
+     */
     private Stage window;
+    /**
+     * Scena nella quale alternare menu e combattimento.
+     */
     private Scene scene;
+    /**
+     * Pannello riutilizzato per mostrare il combattimento.
+     */
     private VBox combatView;
 
+    /**
+     * Etichetta del livello e dell’incontro corrente.
+     */
     private Label encounterLabel;
+    /**
+     * Etichetta del turno o del risultato finale.
+     */
     private Label turnLabel;
 
+    /**
+     * Area non modificabile con salute e pozioni dei partecipanti.
+     */
     private TextArea statusArea;
+    /**
+     * Registro testuale degli eventi della sessione visualizzata.
+     */
     private TextArea eventArea;
 
+    /**
+     * Comando di attacco dell’eroe corrente.
+     */
     private Button attackButton;
+    /**
+     * Comando di utilizzo della pozione.
+     */
     private Button potionButton;
+    /**
+     * Comando disponibile soltanto in assenza di azioni dell’eroe.
+     */
     private Button skipButton;
+    /**
+     * Comando di salvataggio abilitato durante una partita attiva.
+     */
     private Button saveButton;
 
+    /**
+     * Crea la finestra principale, registra i gestori degli eventi e mostra il menu.
+     * La chiusura di una partita attiva richiede conferma e non salva automaticamente.
+     *
+     * @param stage finestra principale fornita da JavaFX
+     */
     @Override
     public void start(Stage stage) {
         window = stage;
@@ -82,11 +139,18 @@ public class GameApplication extends Application {
         stage.show();
     }
 
+    /**
+     * Ferma l’attesa degli attacchi nemici quando JavaFX arresta l’applicazione.
+     */
     @Override
     public void stop() {
         enemyPause.stop();
     }
 
+    /**
+     * Costruisce etichette, aree di testo e pulsanti del combattimento.
+     * Collega i pulsanti ai gestori e inizializza la visualizzazione senza avviare partite.
+     */
     private void createCombatView() {
         Label title = new Label("SUPERNATURAL RPG");
         title.setStyle("-fx-font-size: 28px; -fx-font-weight: bold;");
@@ -155,6 +219,11 @@ public class GameApplication extends Application {
         refreshView();
     }
 
+    /**
+     * Ferma le azioni automatiche e sostituisce la schermata con un nuovo menu.
+     * Abilita Continua in base alla sessione e Carica in base all’esistenza del file;
+     * la validità del contenuto viene verificata soltanto al caricamento.
+     */
     private void showMainMenu() {
         enemyPause.stop();
 
@@ -170,6 +239,9 @@ public class GameApplication extends Application {
         scene.setRoot(menu);
     }
 
+    /**
+     * Riprende la sessione attiva già in memoria, senza leggere il file JSON.
+     */
     private void continueGame() {
         if (!hasActiveGame()) {
             return;
@@ -178,11 +250,18 @@ public class GameApplication extends Application {
         showCombat();
     }
 
+    /**
+     * Mostra il pannello del combattimento e aggiorna controlli e turno.
+     */
     private void showCombat() {
         scene.setRoot(combatView);
         refreshView();
     }
 
+    /**
+     * Chiede conferma se esiste una partita attiva, poi costruisce e avvia
+     * una nuova sessione e svuota il registro degli eventi. Non elimina il file salvato.
+     */
     private void startNewGame() {
         if (hasActiveGame()
                 && !confirm(
@@ -215,6 +294,11 @@ public class GameApplication extends Application {
         showCombat();
     }
 
+    /**
+     * Salva manualmente la partita attiva, chiedendo conferma prima della sovrascrittura.
+     * Ferma il timer durante l’operazione e mostra successo o errore. Alla fine
+     * aggiorna la vista, riattivando la fase nemica se necessario.
+     */
     private void saveGame() {
         if (!hasActiveGame()) {
             return;
@@ -254,6 +338,11 @@ public class GameApplication extends Application {
         }
     }
 
+    /**
+     * Chiede conferma prima di sostituire una sessione attiva e prova a leggere il file.
+     * Assegna la nuova sessione soltanto dopo il caricamento riuscito;
+     * un errore di lettura o validazione mantiene quella precedente.
+     */
     private void loadGame() {
         if (hasActiveGame()
                 && !confirm(
@@ -269,6 +358,7 @@ public class GameApplication extends Application {
         try {
             GameSession loadedSession = saveService.load(saveFile);
 
+            // Sostituisce la sessione aperta soltanto dopo un caricamento riuscito.
             session = loadedSession;
 
             eventArea.clear();
@@ -288,6 +378,14 @@ public class GameApplication extends Application {
         }
     }
 
+    /**
+     * Mostra una finestra informativa o di errore e attende la chiusura.
+     * Non gestisce autonomamente il timer: questa responsabilità resta al chiamante.
+     *
+     * @param type tipo di avviso JavaFX
+     * @param header intestazione della finestra
+     * @param message testo; se null viene mostrato un messaggio generico
+     */
     private void showNotice(
             Alert.AlertType type,
             String header,
@@ -303,6 +401,10 @@ public class GameApplication extends Application {
         alert.showAndWait();
     }
 
+    /**
+     * Fa scegliere bersaglio e arma fra quelli disponibili e invia l’attacco alla sessione.
+     * Annullare una delle scelte non invia alcuna azione e non avanza il turno.
+     */
     private void attack() {
         Hero hero = getActingHero();
 
@@ -381,6 +483,10 @@ public class GameApplication extends Application {
         refreshView();
     }
 
+    /**
+     * Invia l’uso della prima pozione disponibile se l’eroe corrente è ferito.
+     * Cura e consumo effettivi sono eseguiti dalla logica di combattimento.
+     */
     private void usePotion() {
         Hero hero = getActingHero();
 
@@ -403,6 +509,10 @@ public class GameApplication extends Application {
         refreshView();
     }
 
+    /**
+     * Richiede il passaggio del turno soltanto se non risultano attacchi o cure disponibili.
+     * La sessione ripete il controllo per proteggere la regola anche fuori dalla vista.
+     */
     private void skipTurn() {
         Hero hero = getActingHero();
 
@@ -428,6 +538,10 @@ public class GameApplication extends Application {
         refreshView();
     }
 
+    /**
+     * Esegue una sola azione nemica allo scadere del timer, se il combattimento
+     * è visibile e la fase nemica è ancora attiva. Poi aggiorna la schermata.
+     */
     private void playEnemyAction() {
         if (!isCombatVisible() || !hasActiveGame()) {
             return;
@@ -441,6 +555,11 @@ public class GameApplication extends Application {
         refreshView();
     }
 
+    /**
+     * Individua l’eroe utilizzabile dai gestori dei comandi.
+     *
+     * @return eroe corrente oppure null se non è possibile agire dalla vista
+     */
     private Hero getActingHero() {
         if (!isCombatVisible() || !hasActiveGame()) {
             return null;
@@ -449,16 +568,33 @@ public class GameApplication extends Application {
         return session.getCurrentHero();
     }
 
+    /**
+     * Verifica presenza della sessione, avvio e mancata conclusione.
+     *
+     * @return true se la sessione è avviata e non terminata
+     */
     private boolean hasActiveGame() {
         return session != null
                 && session.isStarted()
                 && !session.isFinished();
     }
 
+    /**
+     * Verifica se il pannello di combattimento è la radice della scena corrente.
+     *
+     * @return true se la scena esiste e mostra il combattimento
+     */
     private boolean isCombatVisible() {
         return scene != null && scene.getRoot() == combatView;
     }
 
+    /**
+     * Seleziona i nemici vivi contro cui l’eroe possiede almeno un’arma efficace.
+     *
+     * @param hero eroe da valutare
+     * @param encounter incontro corrente
+     * @return lista dei bersagli selezionabili
+     */
     private List<Enemy> getAvailableTargets(
             Hero hero,
             Encounter encounter
@@ -475,6 +611,13 @@ public class GameApplication extends Application {
         return targets;
     }
 
+    /**
+     * Filtra l’inventario mantenendo le armi con efficacia positiva sul bersaglio.
+     *
+     * @param hero proprietario dell’inventario
+     * @param target nemico da attaccare
+     * @return armi selezionabili, nell’ordine dell’inventario
+     */
     private List<Weapon> getUsableWeapons(
             Hero hero,
             Enemy target
@@ -491,6 +634,12 @@ public class GameApplication extends Application {
         return weapons;
     }
 
+    /**
+     * Seleziona le pozioni presenti nell’inventario dell’eroe.
+     *
+     * @param hero proprietario dell’inventario
+     * @return pozioni nell’ordine dell’inventario
+     */
     private List<Potion> getPotions(Hero hero) {
         List<Potion> potions = new ArrayList<>();
 
@@ -503,6 +652,14 @@ public class GameApplication extends Application {
         return potions;
     }
 
+    /**
+     * Mostra una scelta modale fra le opzioni e restituisce la posizione selezionata.
+     *
+     * @param title titolo della finestra
+     * @param header intestazione della scelta
+     * @param choices opzioni visualizzate
+     * @return indice da zero, oppure -1 se la lista è vuota o la scelta è annullata
+     */
     private int chooseIndex(
             String title,
             String header,
@@ -531,6 +688,14 @@ public class GameApplication extends Application {
         return choices.indexOf(selected.get());
     }
 
+    /**
+     * Ferma il timer e attende una conferma. Se l’utente annulla, aggiorna
+     * il combattimento visibile per consentire la ripresa della fase nemica.
+     *
+     * @param header intestazione della richiesta
+     * @param message spiegazione dell’operazione
+     * @return true soltanto se viene premuto OK
+     */
     private boolean confirm(String header, String message) {
         enemyPause.stop();
 
@@ -551,6 +716,10 @@ public class GameApplication extends Application {
         return confirmed;
     }
 
+    /**
+     * Richiede conferma per abbandonare una sessione attiva, poi ferma il timer
+     * e chiude la finestra. Non esegue un salvataggio automatico.
+     */
     private void requestExit() {
         if (hasActiveGame()
                 && !confirm(
@@ -564,11 +733,17 @@ public class GameApplication extends Application {
         window.close();
     }
 
+    /**
+     * Ricostruisce lo stato visibile e l’abilitazione dei comandi dalla sessione.
+     * Gestisce assenza di partita, vittoria, sconfitta, fase degli eroi e fase nemica.
+     * Durante la fase nemica programma una sola attesa se il combattimento è visibile.
+     */
     private void refreshView() {
         enemyPause.stop();
 
         attackButton.setDisable(true);
         potionButton.setDisable(true);
+        // Parte con le azioni disabilitate e abilita solo quelle coerenti con lo stato.
         skipButton.setDisable(true);
         saveButton.setDisable(!hasActiveGame());
 
@@ -619,6 +794,7 @@ public class GameApplication extends Application {
             );
 
             if (isCombatVisible()) {
+                // La callback farà agire un nemico e aggiornerà nuovamente la vista.
                 enemyPause.playFromStart();
             }
 
@@ -650,6 +826,11 @@ public class GameApplication extends Application {
         turnLabel.setText(text);
     }
 
+    /**
+     * Mostra salute, pozioni e stato di sconfitta degli eroi e dei nemici.
+     *
+     * @param encounter incontro del quale visualizzare i partecipanti
+     */
     private void updateStatus(Encounter encounter) {
         StringBuilder text = new StringBuilder("EROI\n");
 
@@ -695,6 +876,11 @@ public class GameApplication extends Application {
         statusArea.positionCaret(0);
     }
 
+    /**
+     * Accoda i messaggi degli eventi al registro e scorre verso l’ultimo messaggio.
+     *
+     * @param events eventi da visualizzare nell’ordine ricevuto
+     */
     private void showEvents(List<CombatEvent> events) {
         for (CombatEvent event : events) {
             eventArea.appendText(event.message() + "\n");
