@@ -25,6 +25,10 @@ public class GameState {
         this.currentEncounterIndex = 0;
     }
 
+    public List<Level> getLevels() {
+        return List.copyOf(levels);
+    }
+
     public Level getCurrentLevel() {
         return levels.get(currentLevelIndex);
     }
@@ -35,6 +39,25 @@ public class GameState {
 
     public int getCurrentEncounterIndex() {
         return currentEncounterIndex;
+    }
+
+    public void restorePosition(
+            int savedLevelIndex,
+            int savedEncounterIndex
+    ) {
+        if (savedLevelIndex < 0 || savedLevelIndex >= levels.size()) {
+            throw new IllegalArgumentException("L'indice del livello salvato non è valido.");
+        }
+
+        List<Encounter> encounters =
+                levels.get(savedLevelIndex).getEncounters();
+
+        if (savedEncounterIndex < 0 || savedEncounterIndex >= encounters.size()) {
+            throw new IllegalArgumentException("L'indice dell'incontro salvato non è valido.");
+        }
+
+        this.currentLevelIndex = savedLevelIndex;
+        this.currentEncounterIndex = savedEncounterIndex;
     }
 
     public Encounter getCurrentEncounter() {
