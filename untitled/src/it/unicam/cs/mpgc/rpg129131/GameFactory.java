@@ -2,19 +2,35 @@ package it.unicam.cs.mpgc.rpg129131;
 
 import java.util.List;
 
+/**
+ * Costruisce una nuova struttura del gioco con eroi, gruppi e tre livelli.
+ * Riutilizza le stesse istanze degli eroi nei gruppi in cui compaiono.
+ * Non prepara gli inventari e non avvia la sessione; viene usata anche
+ * come base per ricostruire una partita salvata.
+ */
 public class GameFactory {
 
+    /**
+     * Costruisce una nuova partita con cinque eroi e nove incontri.
+     * Sam e Dean sono condivisi fra i gruppi; ogni nemico è una nuova istanza.
+     * Le successive chiamate producono partite indipendenti.
+     *
+     * @return nuovo stato in posizione iniziale, non ancora preparato dalla sessione
+     */
     public GameState create() {
+        // Crea una sola istanza per eroe da riutilizzare nei diversi gruppi.
         Sam sam = new Sam();
         Dean dean = new Dean();
         Bobby bobby = new Bobby();
         Castiel castiel = new Castiel();
         Jack jack = new Jack();
 
+        // Definisce composizione e ordine dei gruppi dei tre livelli.
         Party firstParty = createParty(sam, dean);
         Party secondParty = createParty(sam, dean, bobby);
         Party thirdParty = createParty(sam, dean, castiel, jack);
 
+        // Primo livello: fantasma, vampiro e wendigo.
         Level firstLevel = new Level(
                 LevelNumber.ONE,
                 List.of(
@@ -33,6 +49,7 @@ public class GameFactory {
                 )
         );
 
+        // Secondo livello: due demoni, demone dagli occhi gialli e Lucifero.
         Level secondLevel = new Level(
                 LevelNumber.TWO,
                 List.of(
@@ -51,6 +68,7 @@ public class GameFactory {
                 )
         );
 
+        // Terzo livello: due leviatani, due angeli e avversario finale.
         Level thirdLevel = new Level(
                 LevelNumber.THREE,
                 List.of(
@@ -77,6 +95,13 @@ public class GameFactory {
         );
     }
 
+    /**
+     * Crea un gruppo usando gli eroi forniti nell’ordine indicato, senza copiarli.
+     *
+     * @param heroes eroi che compongono il gruppo
+     * @return nuovo gruppo con i riferimenti forniti
+     * @throws IllegalArgumentException se un eroe è null o duplicato
+     */
     private Party createParty(Hero... heroes) {
         Party party = new Party();
 
