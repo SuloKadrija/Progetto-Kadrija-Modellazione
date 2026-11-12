@@ -4,15 +4,40 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+/**
+ * Esegue una singola azione di un eroe o di un nemico e produce gli eventi.
+ * Non decide quale personaggio debba agire: l’ordine del round e la
+ * progressione degli incontri sono responsabilità di GameSession.
+ */
 public class RoundManager {
 
+    /**
+     * Servizio che calcola e applica gli attacchi degli eroi.
+     */
     private final CombatService combatService;
+    /**
+     * Generatore usato per selezionare un eroe vivo come bersaglio.
+     */
     private final Random random;
 
+    /**
+     * Crea il gestore usando un nuovo generatore casuale.
+     *
+     * @param combatService servizio per gli attacchi degli eroi
+     * @throws IllegalArgumentException se il servizio è null
+     */
     public RoundManager(CombatService combatService) {
         this(combatService, new Random());
     }
 
+    /**
+     * Crea il gestore con dipendenze esplicite.
+     * Fornire il generatore permette ai test di controllare la casualità.
+     *
+     * @param combatService servizio per gli attacchi degli eroi
+     * @param random generatore per scegliere i bersagli nemici
+     * @throws IllegalArgumentException se una dipendenza è null
+     */
     public RoundManager(CombatService combatService, Random random) {
         if (combatService == null || random == null) {
             throw new IllegalArgumentException("Il servizio di combattimento e il generatore casuale " + "non possono essere null.");
@@ -22,6 +47,18 @@ public class RoundManager {
         this.random = random;
     }
 
+    /**
+     * Valida l’incontro e l’appartenenza dell’eroe, poi interpreta l’azione.
+     * Per un attacco verifica anche che il bersaglio appartenga all’incontro.
+     * Alcuni rifiuti operativi vengono restituiti come eventi, non come eccezioni;
+     * questo metodo non avanza né conserva l’indice del turno.
+     *
+     * @param encounter incontro corrente
+     * @param action attacco o uso di pozione richiesto
+     * @return eventi prodotti, compresi eventuali messaggi di rifiuto
+     * @throws IllegalArgumentException se l’azione o i partecipanti non sono validi
+     * @throws IllegalStateException se l’incontro è terminato
+     */
     public List<CombatEvent> executeHeroAction(Encounter encounter, HeroAction action) {
         validateEncounter(encounter);
 
@@ -49,6 +86,17 @@ public class RoundManager {
         return events;
     }
 
+    /**
+     * Esegue un attacco del nemico scegliendo casualmente fra gli eroi vivi.
+     * Il danno è almeno uno dopo la sottrazione della difesa.
+     * Se il nemico è già sconfitto non produce eventi.
+     *
+     * @param encounter incontro corrente
+     * @param enemy nemico appartenente all’incontro
+     * @return eventi con danno effettivo ed eventuale sconfitta del bersaglio
+     * @throws IllegalArgumentException se incontro o nemico non sono validi
+     * @throws IllegalStateException se l’incontro è terminato
+     */
     public List<CombatEvent> executeEnemyAction(Encounter encounter, Enemy enemy) {
         validateEncounter(encounter);
 
@@ -88,6 +136,13 @@ public class RoundManager {
         return events;
     }
 
+    /**
+     * Esegue l’attacco o aggiunge un messaggio che ne spiega il rifiuto.
+     * Le eccezioni di validazione del servizio vengono convertite in eventi.
+     *
+     * @param action richiesta di attacco
+     * @param events lista nella quale aggiungere gli eventi
+     */
     private void playAttackAction(
             AttackAction action,
             List<CombatEvent> events
@@ -120,6 +175,14 @@ public class RoundManager {
         }
     }
 
+    /**
+     * Controlla salute e possesso della pozione, quindi prova a curare l’eroe.
+     * Rimuove la pozione soltanto dopo una cura riuscita; i rifiuti
+     * vengono aggiunti alla lista degli eventi.
+     *
+     * @param action richiesta di cura
+     * @param events lista nella quale aggiungere gli eventi
+     */
     private void playPotionAction(PotionAction action, List<CombatEvent> events) {
         Hero hero = action.hero();
         Potion potion = action.potion();
@@ -138,6 +201,7 @@ public class RoundManager {
 
         try {
             potion.use(hero);
+            // Consuma l’oggetto soltanto se potion.use non ha sollevato eccezioni.
             hero.getInventory().removeItem(potion);
 
             events.add(new CombatEvent(
@@ -148,6 +212,13 @@ public class RoundManager {
         }
     }
 
+    /**
+     * Richiede un incontro esistente con almeno un eroe e un nemico vivi.
+     *
+     * @param encounter incontro da verificare
+     * @throws IllegalArgumentException se l’incontro è null
+     * @throws IllegalStateException se il combattimento è terminato
+     */
     private void validateEncounter(Encounter encounter) {
         if (encounter == null) {
             throw new IllegalArgumentException("L'incontro non può essere null.");
@@ -158,6 +229,14 @@ public class RoundManager {
         }
     }
 
+    /**
+     * Verifica che l’eroe appartenga al gruppo dell’incontro.
+     * Non verifica qui la sua salute o il suo diritto ad agire in questo turno.
+     *
+     * @param encounter incontro già verificato
+     * @param hero eroe richiesto dall’azione
+     * @throws IllegalArgumentException se l’eroe è null o estraneo al gruppo
+     */
     private void validateHero(Encounter encounter, Hero hero) {
         if (hero == null || !encounter.getParty().getMembers().contains(hero)) {
             throw new IllegalArgumentException("L'eroe deve appartenere al party dell'incontro.");

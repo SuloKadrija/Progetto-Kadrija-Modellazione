@@ -3,8 +3,21 @@ package it.unicam.cs.mpgc.rpg129131;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Prepara sblocchi e dotazioni all’inizio di un livello e le pozioni
+ * all’inizio di ciascun incontro. Non gestisce turni, danni o persistenza.
+ * Il caricamento di un salvataggio non deve ripetere questa preparazione.
+ */
 public class LevelPreparation {
 
+    /**
+     * Sblocca gli eroi del gruppo e sostituisce gli inventari con le armi del livello.
+     * Non assegna le pozioni: queste sono preparate separatamente per ogni incontro.
+     *
+     * @param number livello del quale preparare le dotazioni
+     * @param party gruppo che entra nel livello
+     * @throws IllegalArgumentException se livello o gruppo è null
+     */
     public void prepare(LevelNumber number, Party party) {
         if (number == null || party == null) {
             throw new IllegalArgumentException(
@@ -18,6 +31,13 @@ public class LevelPreparation {
         }
     }
 
+    /**
+     * Rimuove tutte le pozioni residue e ne assegna una nuova a ciascun eroe.
+     * Le armi restano invariate; le pozioni non usate non si accumulano.
+     *
+     * @param party gruppo che entra nell’incontro
+     * @throws IllegalArgumentException se il gruppo è null
+     */
     public void prepareEncounter(Party party) {
         if (party == null) {
             throw new IllegalArgumentException(
@@ -28,6 +48,7 @@ public class LevelPreparation {
         for (Hero hero : party.getMembers()) {
             Inventory inventory = hero.getInventory();
 
+            // Itera su una copia per poter rimuovere elementi dall’inventario originale.
             List<Item> previousItems =
                     new ArrayList<>(inventory.getItems());
 
@@ -41,6 +62,12 @@ public class LevelPreparation {
         }
     }
 
+    /**
+     * Svuota l’inventario e aggiunge nuove istanze delle armi previste per il livello.
+     *
+     * @param hero eroe da equipaggiare
+     * @param number livello che determina la dotazione
+     */
     private void replaceInventory(
             Hero hero,
             LevelNumber number
@@ -59,6 +86,14 @@ public class LevelPreparation {
         }
     }
 
+    /**
+     * Costruisce una nuova dotazione di armi per il livello indicato.
+     * Ogni chiamata crea oggetti distinti per evitare di condividere la dotazione.
+     *
+     * @param number livello richiesto
+     * @return lista delle armi previste
+     * @throws IllegalArgumentException se non è definita una dotazione
+     */
     private List<Weapon> createWeapons(LevelNumber number) {
         switch (number) {
             case ONE:
