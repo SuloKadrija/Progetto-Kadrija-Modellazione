@@ -3,7 +3,9 @@ package it.unicam.cs.mpgc.rpg129131;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import javafx.animation.PauseTransition;
 import javafx.application.Application;
 import javafx.geometry.Insets;
@@ -23,6 +25,12 @@ import javafx.util.Duration;
 
 public class GameApplication extends Application {
 
+    private final GameSaveService saveService =
+            new GameSaveService();
+
+    private final Path saveFile =
+            Path.of("saves", "partita.json");
+
     private final PauseTransition enemyPause =
             new PauseTransition(Duration.seconds(0.7));
 
@@ -40,6 +48,7 @@ public class GameApplication extends Application {
     private Button attackButton;
     private Button potionButton;
     private Button skipButton;
+    private Button saveButton;
 
     @Override
     public void start(Stage stage) {
@@ -60,7 +69,7 @@ public class GameApplication extends Application {
             if (hasActiveGame()
                     && !confirm(
                     "Uscire dal gioco?",
-                    "La partita in corso non verrà salvata."
+                    "Le modifiche successive all'ultimo salvataggio andranno perse."
             )) {
                 event.consume();
                 return;
@@ -108,6 +117,9 @@ public class GameApplication extends Application {
         skipButton = new Button("Passa turno");
         skipButton.setOnAction(event -> skipTurn());
 
+        saveButton = new Button("Salva partita");
+        saveButton.setOnAction(event -> saveGame());
+
         Button exitButton = new Button("Esci");
         exitButton.setOnAction(event -> requestExit());
 
@@ -118,6 +130,7 @@ public class GameApplication extends Application {
                 attackButton,
                 potionButton,
                 skipButton,
+                saveButton,
                 exitButton
         );
 
@@ -147,8 +160,10 @@ public class GameApplication extends Application {
 
         MainMenuView menu = new MainMenuView(
                 hasActiveGame(),
+                Files.isRegularFile(saveFile),
                 this::startNewGame,
                 this::continueGame,
+                this::loadGame,
                 this::requestExit
         );
 
@@ -198,6 +213,94 @@ public class GameApplication extends Application {
         eventArea.clear();
         showEvents(session.startNewGame());
         showCombat();
+    }
+
+    private void saveGame() {
+        if (!hasActiveGame()) {
+            return;
+        }
+
+        enemyPause.stop();
+
+        try {
+            if (Files.exists(saveFile)
+                    && !confirm(
+                    "Sovrascrivere il salvataggio?",
+                    "Il salvataggio precedente verrà sostituito."
+            )) {
+                return;
+            }
+
+            saveService.save(saveFile, session);
+
+            eventArea.appendText("Partita salvata.\n");
+
+            showNotice(
+                    Alert.AlertType.INFORMATION,
+                    "Partita salvata",
+                    "Salvataggio completato in:\n"
+                            + saveFile.toAbsolutePath().normalize()
+            );
+        } catch (IOException e) {
+            showNotice(
+                    Alert.AlertType.ERROR,
+                    "Salvataggio non riuscito",
+                    e.getMessage()
+            );
+        } finally {
+            if (isCombatVisible()) {
+                refreshView();
+            }
+        }
+    }
+
+    private void loadGame() {
+        if (hasActiveGame()
+                && !confirm(
+                "Caricare la partita salvata?",
+                "La sessione aperta verrà sostituita. "
+                        + "Le modifiche non salvate andranno perse."
+        )) {
+            return;
+        }
+
+        enemyPause.stop();
+
+        try {
+            GameSession loadedSession = saveService.load(saveFile);
+
+            session = loadedSession;
+
+            eventArea.clear();
+            eventArea.appendText("Partita caricata dal salvataggio.\n");
+
+            showCombat();
+        } catch (IOException e) {
+            showNotice(
+                    Alert.AlertType.ERROR,
+                    "Caricamento non riuscito",
+                    e.getMessage()
+            );
+
+            if (isCombatVisible()) {
+                refreshView();
+            }
+        }
+    }
+
+    private void showNotice(
+            Alert.AlertType type,
+            String header,
+            String message
+    ) {
+        Alert alert = new Alert(type);
+        alert.initOwner(window);
+        alert.setTitle("Supernatural RPG");
+        alert.setHeaderText(header);
+        alert.setContentText(
+                message == null ? "Operazione non riuscita." : message
+        );
+        alert.showAndWait();
     }
 
     private void attack() {
@@ -452,7 +555,7 @@ public class GameApplication extends Application {
         if (hasActiveGame()
                 && !confirm(
                 "Uscire dal gioco?",
-                "La partita in corso non verrà salvata."
+                "Le modifiche successive all'ultimo salvataggio andranno perse."
         )) {
             return;
         }
@@ -467,6 +570,7 @@ public class GameApplication extends Application {
         attackButton.setDisable(true);
         potionButton.setDisable(true);
         skipButton.setDisable(true);
+        saveButton.setDisable(!hasActiveGame());
 
         if (session == null) {
             encounterLabel.setText("Nessuna partita avviata.");

@@ -20,8 +20,10 @@ public class MainMenuView extends StackPane {
 
     public MainMenuView(
             boolean canContinue,
+            boolean canLoad,
             Runnable onNewGame,
             Runnable onContinue,
+            Runnable onLoad,
             Runnable onExit
     ) {
         Image backgroundImage = loadImage("/images/Sfondo.png");
@@ -91,6 +93,13 @@ public class MainMenuView extends StackPane {
 
         continueButton.setDisable(!canContinue);
 
+        Button loadButton = createButton(
+                "Carica partita",
+                onLoad
+        );
+
+        loadButton.setDisable(!canLoad);
+
         Button exitButton = createButton(
                 "Esci",
                 onExit
@@ -100,6 +109,7 @@ public class MainMenuView extends StackPane {
                 18,
                 newGameButton,
                 continueButton,
+                loadButton,
                 exitButton
         );
 
@@ -107,7 +117,9 @@ public class MainMenuView extends StackPane {
 
         Label note = new Label(
                 "Continua partita riprende la sessione aperta.\n"
-                        + "Il salvataggio su disco non è ancora disponibile."
+                        + "Carica partita apre l'ultimo salvataggio.\n"
+                        + "Durante il gioco premi Salva partita "
+                        + "per conservare i progressi."
         );
 
         note.setWrapText(true);
