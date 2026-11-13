@@ -1,20 +1,19 @@
 package it.unicam.cs.mpgc.rpg129131;
 
-import java.util.Arrays;
-import java.util.Scanner;
-
-import it.unicam.cs.mpgc.rpg129131.combat.CombatController;
-import it.unicam.cs.mpgc.rpg129131.combat.CombatService;
-import it.unicam.cs.mpgc.rpg129131.combat.RoundManager;
-import it.unicam.cs.mpgc.rpg129131.game.*;
+import it.unicam.cs.mpgc.rpg129131.game.GameRunner;
+import it.unicam.cs.mpgc.rpg129131.game.GameSession;
+import it.unicam.cs.mpgc.rpg129131.game.GameSessionFactory;
+import it.unicam.cs.mpgc.rpg129131.game.GameView;
 import it.unicam.cs.mpgc.rpg129131.ui.ConsoleGameView;
 import it.unicam.cs.mpgc.rpg129131.ui.GameApplication;
 import javafx.application.Application;
 
+import java.util.Arrays;
+import java.util.Scanner;
+
 /**
- * Punto di ingresso dell’applicazione.
- * Avvia normalmente l’interfaccia JavaFX oppure la modalità console
- * quando gli argomenti contengono --console.
+ * Punto di ingresso dell'applicazione.
+ * Avvia JavaFX oppure la modalità console quando è presente --console.
  */
 public class Main {
 
@@ -32,33 +31,16 @@ public class Main {
     }
 
     /**
-     * Costruisce stato, servizi, sessione e vista console, quindi avvia GameRunner.
-     * Lo Scanner legge da System.in ed è chiuso al termine. Questa modalità
-     * non presenta comandi di salvataggio e caricamento.
+     * Collega una nuova sessione alla vista console e avvia il ciclo del gioco.
+     * Lo Scanner viene chiuso al termine.
+     * La modalità console non espone comandi di salvataggio e caricamento.
      */
     private static void runConsole() {
-        GameState gameState = new GameFactory().create();
-
-        CombatService combatService = new CombatService();
-
-        RoundManager roundManager = new RoundManager(combatService);
-
-        CombatController combatController =
-                new CombatController(roundManager);
-
-        LevelPreparation levelPreparation = new LevelPreparation();
-
-        GameSession session = new GameSession(
-                gameState,
-                combatController,
-                levelPreparation
-        );
+        GameSession session = new GameSessionFactory().create();
 
         try (Scanner scanner = new Scanner(System.in)) {
             GameView view = new ConsoleGameView(scanner);
-
             GameRunner runner = new GameRunner(session, view);
-
             runner.run();
         }
     }

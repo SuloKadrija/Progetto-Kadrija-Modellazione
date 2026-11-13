@@ -1,15 +1,13 @@
 package it.unicam.cs.mpgc.rpg129131.persistence;
 
-import it.unicam.cs.mpgc.rpg129131.combat.CombatController;
-import it.unicam.cs.mpgc.rpg129131.combat.CombatService;
-import it.unicam.cs.mpgc.rpg129131.combat.RoundManager;
+
 import it.unicam.cs.mpgc.rpg129131.game.*;
 import it.unicam.cs.mpgc.rpg129131.model.Encounter;
 import it.unicam.cs.mpgc.rpg129131.model.Level;
 import it.unicam.cs.mpgc.rpg129131.model.enemy.Enemy;
 import it.unicam.cs.mpgc.rpg129131.model.hero.Hero;
 import it.unicam.cs.mpgc.rpg129131.model.item.*;
-
+import it.unicam.cs.mpgc.rpg129131.game.GameSessionFactory;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -109,15 +107,14 @@ public class GameSaveMapper {
     }
 
     /**
-     * Ricostruisce una nuova partita indipendente applicando i dati salvati.
-     * Ripristina prima posizione, eroi e nemici, verifica la progressione
-     * e infine ripristina il turno senza chiamare startNewGame.
-     * Se un controllo fallisce, la nuova sessione non viene restituita.
+     * Ricostruisce una partita indipendente applicando i dati salvati.
+     * Ripristina posizione, eroi e nemici, verifica la progressione
+     * e ripristina infine il turno senza preparare nuovamente le dotazioni.
      *
-     * @param data dati del salvataggio già costruiti
+     * @param data dati del salvataggio
      * @return nuova sessione avviata e pronta a proseguire
      * @throws IllegalArgumentException se i dati sono null, incompleti o incoerenti
-     * @throws IllegalStateException se lo stato finale non consente di riprendere il turno
+     * @throws IllegalStateException se lo stato non consente di riprendere il turno
      */
     public GameSession fromSaveData(GameSaveData data) {
         if (data == null) {
@@ -126,7 +123,6 @@ public class GameSaveMapper {
             );
         }
 
-        // La factory mantiene i riferimenti condivisi degli eroi fra i diversi gruppi.
         GameState state = new GameFactory().create();
 
         state.restorePosition(
@@ -138,16 +134,9 @@ public class GameSaveMapper {
         restoreEncounters(state, data.encounters());
         validateProgress(state);
 
-        CombatService combatService = new CombatService();
-        RoundManager roundManager = new RoundManager(combatService);
+        GameSession session = new GameSessionFactory().create(state);
 
-        GameSession session = new GameSession(
-                state,
-                new CombatController(roundManager),
-                new LevelPreparation()
-        );
-
-        // Ripristina il turno per ultimo: non rigenera armi, pozioni o salute.
+        // Il ripristino non deve rigenerare armi, pozioni o salute.
         session.restoreTurnState(data.turn());
 
         return session;

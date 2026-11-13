@@ -8,7 +8,6 @@ import it.unicam.cs.mpgc.rpg129131.game.GameView;
 import it.unicam.cs.mpgc.rpg129131.model.Encounter;
 import it.unicam.cs.mpgc.rpg129131.model.LevelNumber;
 import it.unicam.cs.mpgc.rpg129131.model.enemy.Enemy;
-import it.unicam.cs.mpgc.rpg129131.model.item.Item;
 import it.unicam.cs.mpgc.rpg129131.model.item.Potion;
 import it.unicam.cs.mpgc.rpg129131.model.item.Weapon;
 import it.unicam.cs.mpgc.rpg129131.model.hero.Hero;

@@ -8,13 +8,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import it.unicam.cs.mpgc.rpg129131.combat.ActionAvailability;
 import it.unicam.cs.mpgc.rpg129131.combat.*;
-import it.unicam.cs.mpgc.rpg129131.game.GameFactory;
 import it.unicam.cs.mpgc.rpg129131.game.GameSession;
 import it.unicam.cs.mpgc.rpg129131.game.GameState;
-import it.unicam.cs.mpgc.rpg129131.game.LevelPreparation;
 import it.unicam.cs.mpgc.rpg129131.model.Encounter;
 import it.unicam.cs.mpgc.rpg129131.model.enemy.Enemy;
-import it.unicam.cs.mpgc.rpg129131.model.item.Item;
 import it.unicam.cs.mpgc.rpg129131.model.item.Potion;
 import it.unicam.cs.mpgc.rpg129131.model.item.Weapon;
 import it.unicam.cs.mpgc.rpg129131.model.hero.Hero;
@@ -35,6 +32,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import it.unicam.cs.mpgc.rpg129131.game.GameSessionFactory;
 
 /**
  * Implementa l’interfaccia JavaFX e collega i comandi del giocatore alla sessione.
@@ -276,8 +274,9 @@ public class GameApplication extends Application {
     }
 
     /**
-     * Chiede conferma se esiste una partita attiva, poi costruisce e avvia
-     * una nuova sessione e svuota il registro degli eventi. Non elimina il file salvato.
+     * Chiede conferma prima di abbandonare una sessione attiva.
+     * Crea e avvia una nuova partita, svuota il registro e mostra il combattimento.
+     * Non elimina il file salvato.
      */
     private void startNewGame() {
         if (hasActiveGame()
@@ -290,21 +289,7 @@ public class GameApplication extends Application {
 
         enemyPause.stop();
 
-        GameState gameState = new GameFactory().create();
-
-        CombatService combatService = new CombatService();
-        RoundManager roundManager = new RoundManager(combatService);
-
-        CombatController combatController =
-                new CombatController(roundManager);
-
-        LevelPreparation levelPreparation = new LevelPreparation();
-
-        session = new GameSession(
-                gameState,
-                combatController,
-                levelPreparation
-        );
+        session = new GameSessionFactory().create();
 
         eventArea.clear();
         showEvents(session.startNewGame());
