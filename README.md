@@ -18,7 +18,7 @@ Non è necessario installare Gradle manualmente: il progetto include il **Gradle
 Apri un terminale e clona il repository:
 
 ```bash
-git clone [https://github.com/SuloKadrija/Progetto-Kadrija-Modellazione.git](https://github.com/SuloKadrija/Progetto-Kadrija-Modellazione.git)
+git clone https://github.com/SuloKadrija/Progetto-Kadrija-Modellazione.git
 cd Progetto-Kadrija-Modellazione
 ```
 
