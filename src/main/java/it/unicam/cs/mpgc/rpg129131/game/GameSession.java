@@ -8,9 +8,7 @@ import it.unicam.cs.mpgc.rpg129131.model.LevelNumber;
 import it.unicam.cs.mpgc.rpg129131.model.Party;
 import it.unicam.cs.mpgc.rpg129131.model.enemy.Enemy;
 import it.unicam.cs.mpgc.rpg129131.model.hero.Hero;
-import it.unicam.cs.mpgc.rpg129131.model.item.Item;
-import it.unicam.cs.mpgc.rpg129131.model.item.Potion;
-import it.unicam.cs.mpgc.rpg129131.model.item.Weapon;
+import it.unicam.cs.mpgc.rpg129131.combat.ActionAvailability;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +19,9 @@ import java.util.List;
  * Non dipende da JavaFX o dalla console e non gestisce direttamente i file JSON.
  */
 public class GameSession {
+
+    /** Criteri condivisi usati per verificare se il turno può essere saltato. */
+    private final ActionAvailability actionAvailability = new ActionAvailability();
 
     /** Stato della partita coordinata dalla sessione. */
     private final GameState gameState;
@@ -497,29 +498,16 @@ public class GameSession {
     }
 
     /**
-     * Cerca una pozione utilizzabile oppure un'arma efficace contro un nemico vivo.
+     * Verifica tramite il servizio condiviso se l'eroe può attaccare o curarsi.
      *
-     * @param hero eroe corrente da valutare
-     * @return true se l'eroe dispone di almeno un'azione
+     * @param hero eroe corrente
+     * @return true se esiste almeno un'azione disponibile
      */
     private boolean hasAvailableAction(Hero hero) {
-        for (Item item : hero.getInventory().getItems()) {
-            if (item instanceof Potion
-                    && hero.getHealth() < hero.getMaxHealth()) {
-                return true;
-            }
-
-            if (item instanceof Weapon weapon) {
-                for (Enemy enemy : gameState.getCurrentEncounter().getEnemies()) {
-                    if (enemy.isAlive()
-                            && weapon.getMultiplierAgainst(enemy) > 0.0) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        return false;
+        return actionAvailability.hasAvailableAction(
+                hero,
+                gameState.getCurrentEncounter()
+        );
     }
 
     /**

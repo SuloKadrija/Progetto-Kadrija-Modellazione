@@ -6,7 +6,7 @@ import java.util.Optional;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-
+import it.unicam.cs.mpgc.rpg129131.combat.ActionAvailability;
 import it.unicam.cs.mpgc.rpg129131.combat.*;
 import it.unicam.cs.mpgc.rpg129131.game.GameFactory;
 import it.unicam.cs.mpgc.rpg129131.game.GameSession;
@@ -49,6 +49,10 @@ public class GameApplication extends Application {
      */
     private final GameSaveService saveService =
             new GameSaveService();
+
+
+    /** Criteri condivisi per individuare bersagli e oggetti disponibili. */
+    private final ActionAvailability actionAvailability = new ActionAvailability();
 
     /**
      * Unico slot di salvataggio, relativo alla directory di avvio del programma.
@@ -602,67 +606,35 @@ public class GameApplication extends Application {
     }
 
     /**
-     * Seleziona i nemici vivi contro cui l’eroe possiede almeno un’arma efficace.
+     * Delega al servizio condiviso la selezione dei bersagli attaccabili.
      *
      * @param hero eroe da valutare
      * @param encounter incontro corrente
-     * @return lista dei bersagli selezionabili
+     * @return bersagli selezionabili nell'ordine dell'incontro
      */
-    private List<Enemy> getAvailableTargets(
-            Hero hero,
-            Encounter encounter
-    ) {
-        List<Enemy> targets = new ArrayList<>();
-
-        for (Enemy enemy : encounter.getEnemies()) {
-            if (enemy.isAlive()
-                    && !getUsableWeapons(hero, enemy).isEmpty()) {
-                targets.add(enemy);
-            }
-        }
-
-        return targets;
+    private List<Enemy> getAvailableTargets(Hero hero, Encounter encounter) {
+        return actionAvailability.getAvailableTargets(hero, encounter);
     }
 
     /**
-     * Filtra l’inventario mantenendo le armi con efficacia positiva sul bersaglio.
+     * Delega al servizio condiviso la selezione delle armi utilizzabili.
      *
-     * @param hero proprietario dell’inventario
-     * @param target nemico da attaccare
-     * @return armi selezionabili, nell’ordine dell’inventario
+     * @param hero proprietario dell'inventario
+     * @param target bersaglio scelto
+     * @return armi selezionabili nell'ordine dell'inventario
      */
-    private List<Weapon> getUsableWeapons(
-            Hero hero,
-            Enemy target
-    ) {
-        List<Weapon> weapons = new ArrayList<>();
-
-        for (Item item : hero.getInventory().getItems()) {
-            if (item instanceof Weapon weapon
-                    && weapon.getMultiplierAgainst(target) > 0.0) {
-                weapons.add(weapon);
-            }
-        }
-
-        return weapons;
+    private List<Weapon> getUsableWeapons(Hero hero, Enemy target) {
+        return actionAvailability.getUsableWeapons(hero, target);
     }
 
     /**
-     * Seleziona le pozioni presenti nell’inventario dell’eroe.
+     * Delega al servizio condiviso la ricerca delle pozioni possedute.
      *
-     * @param hero proprietario dell’inventario
-     * @return pozioni nell’ordine dell’inventario
+     * @param hero proprietario dell'inventario
+     * @return pozioni nell'ordine dell'inventario
      */
     private List<Potion> getPotions(Hero hero) {
-        List<Potion> potions = new ArrayList<>();
-
-        for (Item item : hero.getInventory().getItems()) {
-            if (item instanceof Potion potion) {
-                potions.add(potion);
-            }
-        }
-
-        return potions;
+        return actionAvailability.getPotions(hero);
     }
 
     /**
