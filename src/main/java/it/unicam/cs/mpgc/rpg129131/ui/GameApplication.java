@@ -18,18 +18,10 @@ import it.unicam.cs.mpgc.rpg129131.model.hero.Hero;
 import it.unicam.cs.mpgc.rpg129131.persistence.GameSaveService;
 import javafx.animation.PauseTransition;
 import javafx.application.Application;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ChoiceDialog;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextArea;
-import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import it.unicam.cs.mpgc.rpg129131.game.GameSessionFactory;
@@ -74,45 +66,9 @@ public class GameApplication extends Application {
      * Scena nella quale alternare menu e combattimento.
      */
     private Scene scene;
-    /**
-     * Pannello riutilizzato per mostrare il combattimento.
-     */
-    private VBox combatView;
+    /** Schermata che contiene i controlli del combattimento. */
+    private CombatView combatView;
 
-    /**
-     * Etichetta del livello e dell’incontro corrente.
-     */
-    private Label encounterLabel;
-    /**
-     * Etichetta del turno o del risultato finale.
-     */
-    private Label turnLabel;
-
-    /**
-     * Area non modificabile con salute e pozioni dei partecipanti.
-     */
-    private TextArea statusArea;
-    /**
-     * Registro testuale degli eventi della sessione visualizzata.
-     */
-    private TextArea eventArea;
-
-    /**
-     * Comando di attacco dell’eroe corrente.
-     */
-    private Button attackButton;
-    /**
-     * Comando di utilizzo della pozione.
-     */
-    private Button potionButton;
-    /**
-     * Comando disponibile soltanto in assenza di azioni dell’eroe.
-     */
-    private Button skipButton;
-    /**
-     * Comando di salvataggio abilitato durante una partita attiva.
-     */
-    private Button saveButton;
 
     /**
      * Configura la persistenza JSON predefinita.
@@ -187,73 +143,17 @@ public class GameApplication extends Application {
     }
 
     /**
-     * Costruisce etichette, aree di testo e pulsanti del combattimento.
-     * Collega i pulsanti ai gestori e inizializza la visualizzazione senza avviare partite.
+     * Costruisce la schermata e collega i suoi comandi ai gestori dell'applicazione.
      */
     private void createCombatView() {
-        Label title = new Label("SUPERNATURAL RPG");
-        title.setStyle("-fx-font-size: 28px; -fx-font-weight: bold;");
-
-        encounterLabel = new Label();
-        turnLabel = new Label();
-        turnLabel.setWrapText(true);
-
-        statusArea = new TextArea();
-        statusArea.setEditable(false);
-        statusArea.setWrapText(true);
-        statusArea.setPrefRowCount(9);
-
-        eventArea = new TextArea();
-        eventArea.setEditable(false);
-        eventArea.setWrapText(true);
-        eventArea.setPrefRowCount(10);
-
-        Button menuButton = new Button("Menu principale");
-        menuButton.setOnAction(event -> showMainMenu());
-
-        attackButton = new Button("Attacca");
-        attackButton.setOnAction(event -> attack());
-
-        potionButton = new Button("Usa pozione");
-        potionButton.setOnAction(event -> usePotion());
-
-        skipButton = new Button("Passa turno");
-        skipButton.setOnAction(event -> skipTurn());
-
-        saveButton = new Button("Salva partita");
-        saveButton.setOnAction(event -> saveGame());
-
-        Button exitButton = new Button("Esci");
-        exitButton.setOnAction(event -> requestExit());
-
-        FlowPane controls = new FlowPane(12, 12);
-        controls.setAlignment(Pos.CENTER);
-        controls.getChildren().addAll(
-                menuButton,
-                attackButton,
-                potionButton,
-                skipButton,
-                saveButton,
-                exitButton
+        combatView = new CombatView(
+                this::showMainMenu,
+                this::attack,
+                this::usePotion,
+                this::skipTurn,
+                this::saveGame,
+                this::requestExit
         );
-
-        combatView = new VBox(
-                12,
-                title,
-                encounterLabel,
-                turnLabel,
-                controls,
-                new Label("Stato del combattimento"),
-                statusArea,
-                new Label("Eventi"),
-                eventArea
-        );
-
-        combatView.setAlignment(Pos.TOP_CENTER);
-        combatView.setPadding(new Insets(24));
-
-        VBox.setVgrow(statusArea, Priority.ALWAYS);
-        VBox.setVgrow(eventArea, Priority.ALWAYS);
 
         refreshView();
     }
@@ -315,7 +215,7 @@ public class GameApplication extends Application {
 
         session = new GameSessionFactory().create();
 
-        eventArea.clear();
+        combatView.clearEvents();
         showEvents(session.startNewGame());
         showCombat();
     }
@@ -343,8 +243,7 @@ public class GameApplication extends Application {
 
             saveService.save(saveFile, session);
 
-            eventArea.appendText("Partita salvata.\n");
-
+            combatView.appendEvent("Partita salvata.");
             showNotice(
                     Alert.AlertType.INFORMATION,
                     "Partita salvata",
@@ -387,8 +286,8 @@ public class GameApplication extends Application {
             // Sostituisce la sessione aperta soltanto dopo un caricamento riuscito.
             session = loadedSession;
 
-            eventArea.clear();
-            eventArea.appendText("Partita caricata dal salvataggio.\n");
+            combatView.clearEvents();
+            combatView.appendEvent("Partita caricata dal salvataggio.");
 
             showCombat();
         } catch (IOException e) {
@@ -728,29 +627,25 @@ public class GameApplication extends Application {
     }
 
     /**
-     * Ricostruisce lo stato visibile e l’abilitazione dei comandi dalla sessione.
-     * Gestisce assenza di partita, vittoria, sconfitta, fase degli eroi e fase nemica.
-     * Durante la fase nemica programma una sola attesa se il combattimento è visibile.
+     * Aggiorna testi e comandi in base alla sessione.
+     * Mantiene nell'applicazione il coordinamento del timer dei nemici.
      */
     private void refreshView() {
         enemyPause.stop();
 
-        attackButton.setDisable(true);
-        potionButton.setDisable(true);
-        // Parte con le azioni disabilitate e abilita solo quelle coerenti con lo stato.
-        skipButton.setDisable(true);
-        saveButton.setDisable(!hasActiveGame());
+        combatView.setActionsEnabled(false, false, false);
+        combatView.setSaveEnabled(hasActiveGame());
 
         if (session == null) {
-            encounterLabel.setText("Nessuna partita avviata.");
-            turnLabel.setText("Premi Nuova partita per iniziare.");
-            statusArea.clear();
+            combatView.setEncounterText("Nessuna partita avviata.");
+            combatView.setTurnText("Premi Nuova partita per iniziare.");
+            combatView.setStatusText("");
             return;
         }
 
         GameState state = session.getGameState();
 
-        encounterLabel.setText(
+        combatView.setEncounterText(
                 "Livello " + (state.getCurrentLevelIndex() + 1)
                         + " | Combattimento "
                         + (state.getCurrentEncounterIndex() + 1)
@@ -761,18 +656,18 @@ public class GameApplication extends Application {
         if (encounter != null) {
             updateStatus(encounter);
         } else {
-            statusArea.setText(
+            combatView.setStatusText(
                     "Tutti i combattimenti sono stati completati."
             );
         }
 
         if (session.isFinished()) {
             if (state.isGameCompleted()) {
-                turnLabel.setText(
+                combatView.setTurnText(
                         "Vittoria! Hai completato tutti i livelli."
                 );
             } else {
-                turnLabel.setText(
+                combatView.setTurnText(
                         "Sconfitta. Puoi iniziare una nuova partita."
                 );
             }
@@ -783,12 +678,11 @@ public class GameApplication extends Application {
         Hero hero = session.getCurrentHero();
 
         if (hero == null) {
-            turnLabel.setText(
+            combatView.setTurnText(
                     "Turno dei nemici: azioni automatiche in corso."
             );
 
             if (isCombatVisible()) {
-                // La callback farà agire un nemico e aggiornerà nuovamente la vista.
                 enemyPause.playFromStart();
             }
 
@@ -796,18 +690,17 @@ public class GameApplication extends Application {
         }
 
         boolean canAttack =
-                !getAvailableTargets(
-                        hero,
-                        state.getCurrentEncounter()
-                ).isEmpty();
+                !getAvailableTargets(hero, encounter).isEmpty();
 
         boolean canHeal =
                 hero.getHealth() < hero.getMaxHealth()
                         && !getPotions(hero).isEmpty();
 
-        attackButton.setDisable(!canAttack);
-        potionButton.setDisable(!canHeal);
-        skipButton.setDisable(canAttack || canHeal);
+        combatView.setActionsEnabled(
+                canAttack,
+                canHeal,
+                !canAttack && !canHeal
+        );
 
         String text = "Turno di " + hero.getName()
                 + " - HP: " + hero.getHealth()
@@ -817,7 +710,7 @@ public class GameApplication extends Application {
             text += " — Nessuna azione disponibile: passa il turno.";
         }
 
-        turnLabel.setText(text);
+        combatView.setTurnText(text);
     }
 
     /**
@@ -866,20 +759,17 @@ public class GameApplication extends Application {
             text.append("\n");
         }
 
-        statusArea.setText(text.toString());
-        statusArea.positionCaret(0);
+        combatView.setStatusText(text.toString());
     }
 
     /**
-     * Accoda i messaggi degli eventi al registro e scorre verso l’ultimo messaggio.
+     * Invia alla schermata i messaggi prodotti dalla sessione.
      *
-     * @param events eventi da visualizzare nell’ordine ricevuto
+     * @param events eventi da visualizzare nell'ordine ricevuto
      */
     private void showEvents(List<CombatEvent> events) {
         for (CombatEvent event : events) {
-            eventArea.appendText(event.message() + "\n");
+            combatView.appendEvent(event.message());
         }
-
-        eventArea.positionCaret(eventArea.getLength());
     }
 }
