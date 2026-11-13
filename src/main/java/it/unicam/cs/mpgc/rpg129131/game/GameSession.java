@@ -1,14 +1,16 @@
 package it.unicam.cs.mpgc.rpg129131.game;
 
-import it.unicam.cs.mpgc.rpg129131.combat.*;
+import it.unicam.cs.mpgc.rpg129131.combat.CombatController;
+import it.unicam.cs.mpgc.rpg129131.combat.CombatEvent;
+import it.unicam.cs.mpgc.rpg129131.combat.HeroAction;
 import it.unicam.cs.mpgc.rpg129131.model.Encounter;
 import it.unicam.cs.mpgc.rpg129131.model.LevelNumber;
 import it.unicam.cs.mpgc.rpg129131.model.Party;
 import it.unicam.cs.mpgc.rpg129131.model.enemy.Enemy;
+import it.unicam.cs.mpgc.rpg129131.model.hero.Hero;
 import it.unicam.cs.mpgc.rpg129131.model.item.Item;
 import it.unicam.cs.mpgc.rpg129131.model.item.Potion;
 import it.unicam.cs.mpgc.rpg129131.model.item.Weapon;
-import it.unicam.cs.mpgc.rpg129131.model.hero.Hero;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,34 +22,25 @@ import java.util.List;
  */
 public class GameSession {
 
-    /**
-     * Stato della partita coordinata dalla sessione.
-     */
+    /** Stato della partita coordinata dalla sessione. */
     private final GameState gameState;
-    /**
-     * Controllore al quale delegare le singole azioni.
-     */
+
+    /** Controllore al quale delegare le singole azioni. */
     private final CombatController combatController;
-    /**
-     * Servizio per armi, sblocchi e pozioni.
-     */
+
+    /** Servizio per armi, sblocchi e pozioni. */
     private final LevelPreparation levelPreparation;
 
-    /**
-     * Indica che avvio o ripristino sono stati completati.
-     */
+    /** Indica che avvio o ripristino sono stati completati. */
     private boolean started;
-    /**
-     * True durante la fase dei nemici, false durante quella degli eroi.
-     */
+
+    /** True durante la fase dei nemici, false durante quella degli eroi. */
     private boolean enemiesTurn;
-    /**
-     * Indice dell’eroe corrente; raggiunge la dimensione del gruppo nella fase nemica.
-     */
+
+    /** Indice dell'eroe corrente o dimensione del gruppo nella fase nemica. */
     private int heroIndex;
-    /**
-     * Indice dal quale cercare il prossimo nemico vivo che deve agire.
-     */
+
+    /** Indice dal quale cercare il prossimo nemico vivo che deve agire. */
     private int enemyIndex;
 
     /**
@@ -78,11 +71,12 @@ public class GameSession {
 
     /**
      * Avvia una sola volta una partita in posizione iniziale.
-     * Prepara armi e pozioni, segna la sessione come avviata e inizia il round.
+     * Prepara armi e pozioni e inizia il primo round.
      * Non deve essere chiamato per riprendere un salvataggio.
      *
      * @return eventi iniziali della partita
-     * @throws IllegalStateException se la sessione è già avviata o lo stato iniziale non è valido
+     * @throws IllegalStateException se la sessione è già avviata
+     *                               o lo stato iniziale non è valido
      */
     public List<CombatEvent> startNewGame() {
         if (started) {
@@ -102,7 +96,6 @@ public class GameSession {
         }
 
         List<CombatEvent> events = new ArrayList<>();
-
         events.add(new CombatEvent("=== SUPERNATURAL RPG ==="));
 
         prepareCurrentLevel(events);
@@ -115,15 +108,17 @@ public class GameSession {
     }
 
     /**
-     * Richiede che l’azione appartenga all’eroe corrente e la esegue immediatamente.
-     * Verifica subito la fine dell’incontro; se continua, passa al prossimo eroe vivo.
-     * L’avanzamento segue il ritorno del controllore anche quando questo produce
-     * un evento di rifiuto anziché sollevare un’eccezione.
+     * Verifica che la richiesta appartenga all'eroe corrente e la esegue.
+     * Controlla subito la fine dell'incontro; se continua, passa al prossimo eroe.
+     * Il turno avanza anche quando il controllore restituisce un evento
+     * di rifiuto invece di sollevare un'eccezione.
      *
-     * @param action attacco o uso di pozione dell’eroe corrente
-     * @return eventi dell’azione e delle eventuali transizioni
-     * @throws IllegalArgumentException se l’azione non è supportata o riguarda un altro eroe
-     * @throws IllegalStateException se la partita non è attiva o è la fase nemica
+     * @param action azione richiesta dall'eroe corrente
+     * @return eventi dell'azione e delle eventuali transizioni
+     * @throws IllegalArgumentException se l'azione è null, riguarda un altro eroe
+     *                                  o non è supportata dal sistema di combattimento
+     * @throws IllegalStateException se la partita non è attiva
+     *                               o è la fase nemica
      */
     public List<CombatEvent> playHeroAction(HeroAction action) {
         requireActiveGame();
@@ -136,19 +131,13 @@ public class GameSession {
             );
         }
 
-        Hero actingHero;
-
-        if (action instanceof AttackAction attackAction) {
-            actingHero = attackAction.hero();
-        } else if (action instanceof PotionAction potionAction) {
-            actingHero = potionAction.hero();
-        } else {
+        if (action == null) {
             throw new IllegalArgumentException(
-                    "L'azione non è supportata o è null."
+                    "L'azione non può essere null."
             );
         }
 
-        if (actingHero != currentHero) {
+        if (action.hero() != currentHero) {
             throw new IllegalArgumentException(
                     "Deve agire " + currentHero.getName() + "."
             );
@@ -174,7 +163,8 @@ public class GameSession {
      * Passa al prossimo eroe soltanto se quello corrente non può attaccare né curarsi.
      *
      * @return evento che descrive il passaggio del turno
-     * @throws IllegalStateException se la partita non è attiva, è la fase nemica o esiste un’azione disponibile
+     * @throws IllegalStateException se la partita non è attiva, è la fase nemica
+     *                               o esiste un'azione disponibile
      */
     public List<CombatEvent> skipCurrentHero() {
         requireActiveGame();
@@ -208,12 +198,13 @@ public class GameSession {
     }
 
     /**
-     * Esegue l’azione del prossimo nemico vivo nella fase nemica.
-     * Controlla immediatamente la fine dell’incontro e inizia un nuovo round
+     * Esegue l'azione del prossimo nemico vivo nella fase nemica.
+     * Controlla la fine dell'incontro e inizia un nuovo round
      * quando tutti i nemici ancora vivi hanno agito.
      *
-     * @return eventi dell’attacco e dell’eventuale fine del round o incontro
-     * @throws IllegalStateException se la sessione non è attiva, devono agire gli eroi o non esiste un nemico disponibile
+     * @return eventi dell'attacco e delle eventuali transizioni
+     * @throws IllegalStateException se la sessione non è attiva,
+     *                               devono agire gli eroi o non esiste un nemico disponibile
      */
     public List<CombatEvent> playNextEnemyAction() {
         requireActiveGame();
@@ -264,7 +255,7 @@ public class GameSession {
     }
 
     /**
-     * Individua l’eroe corrente nella partita attiva.
+     * Individua l'eroe corrente nella partita attiva.
      *
      * @return eroe che deve agire oppure null durante la fase nemica
      * @throws IllegalStateException se la sessione non è avviata o è terminata
@@ -318,24 +309,30 @@ public class GameSession {
     /**
      * Ripristina il turno e avvia una sessione non ancora iniziata.
      * Richiede che posizione, salute e inventari siano già stati ricostruiti.
-     * Non assegna nuove dotazioni e non ricomincia il round. Tutti i controlli
-     * precedono l’assegnazione dei campi della sessione.
+     * Non assegna nuove dotazioni e non ricomincia il round.
      *
      * @param savedTurn fase e indici da ripristinare
      * @throws IllegalArgumentException se i dati del turno sono null o incoerenti
-     * @throws IllegalStateException se la sessione è già avviata o la partita è terminata
+     * @throws IllegalStateException se la sessione è già avviata
+     *                               o la partita è terminata
      */
     public void restoreTurnState(TurnState savedTurn) {
         if (savedTurn == null) {
-            throw new IllegalArgumentException("Lo stato del turno non può essere null.");
+            throw new IllegalArgumentException(
+                    "Lo stato del turno non può essere null."
+            );
         }
 
         if (started) {
-            throw new IllegalStateException("Il ripristino richiede una sessione non ancora avviata.");
+            throw new IllegalStateException(
+                    "Il ripristino richiede una sessione non ancora avviata."
+            );
         }
 
         if (isFinished()) {
-            throw new IllegalStateException("Non è possibile riprendere una partita terminata.");
+            throw new IllegalStateException(
+                    "Non è possibile riprendere una partita terminata."
+            );
         }
 
         Encounter encounter = gameState.getCurrentEncounter();
@@ -344,14 +341,19 @@ public class GameSession {
 
         if (savedTurn.enemiesTurn()) {
             if (savedTurn.heroIndex() != heroes.size()) {
-                throw new IllegalArgumentException("Nel turno dei nemici tutti gli eroi devono avere concluso il turno.");
+                throw new IllegalArgumentException(
+                        "Nel turno dei nemici tutti gli eroi "
+                                + "devono avere concluso il turno."
+                );
             }
 
             if (savedTurn.enemyIndex() >= enemies.size()) {
-                throw new IllegalArgumentException("L'indice del nemico salvato non è valido.");
+                throw new IllegalArgumentException(
+                        "L'indice del nemico salvato non è valido."
+                );
             }
 
-            // L’indice può indicare un nemico sconfitto: l’esecuzione lo salterà.
+            // Un indice relativo a un nemico sconfitto verrà saltato all'esecuzione.
             boolean hasNextLivingEnemy = false;
 
             for (int i = savedTurn.enemyIndex(); i < enemies.size(); i++) {
@@ -362,19 +364,26 @@ public class GameSession {
             }
 
             if (!hasNextLivingEnemy) {
-                throw new IllegalArgumentException("Non ci sono nemici vivi che debbano ancora agire.");
+                throw new IllegalArgumentException(
+                        "Non ci sono nemici vivi che debbano ancora agire."
+                );
             }
         } else {
-            if (savedTurn.heroIndex() >= heroes.size() || !heroes.get(savedTurn.heroIndex()).isAlive()) {
-                throw new IllegalArgumentException("L'eroe del turno salvato non è valido o è sconfitto.");
+            if (savedTurn.heroIndex() >= heroes.size()
+                    || !heroes.get(savedTurn.heroIndex()).isAlive()) {
+                throw new IllegalArgumentException(
+                        "L'eroe del turno salvato non è valido o è sconfitto."
+                );
             }
 
             if (savedTurn.enemyIndex() != 0) {
-                throw new IllegalArgumentException("Nel turno degli eroi l'indice del nemico deve essere zero.");
+                throw new IllegalArgumentException(
+                        "Nel turno degli eroi l'indice del nemico deve essere zero."
+                );
             }
         }
 
-        // Non richiama beginRound: conserva il punto esatto della fase salvata.
+        // Assegna lo stato soltanto dopo aver completato tutti i controlli.
         enemiesTurn = savedTurn.enemiesTurn();
         heroIndex = savedTurn.heroIndex();
         enemyIndex = savedTurn.enemyIndex();
@@ -403,12 +412,11 @@ public class GameSession {
     }
 
     /**
-     * Avanza l’indice oltre gli eroi sconfitti.
+     * Avanza oltre gli eroi sconfitti.
      * Se non restano eroi da far agire, passa alla fase nemica.
      */
     private void moveToNextLivingHero() {
-        List<Hero> heroes =
-                gameState.getCurrentParty().getMembers();
+        List<Hero> heroes = gameState.getCurrentParty().getMembers();
 
         while (heroIndex < heroes.size()
                 && !heroes.get(heroIndex).isAlive()) {
@@ -421,13 +429,13 @@ public class GameSession {
     }
 
     /**
-     * Valuta sconfitta o vittoria dopo un’azione.
-     * In caso di vittoria cura il gruppo, avanza quando possibile, prepara
-     * il nuovo incontro e ricomincia il round. L’ultima vittoria termina il gioco.
+     * Valuta sconfitta o vittoria dopo un'azione.
+     * In caso di vittoria cura il gruppo e, se il gioco non è terminato,
+     * avanza, prepara il nuovo incontro e ricomincia il round.
      *
-     * @param encounter incontro nel quale è stata eseguita l’azione
+     * @param encounter incontro nel quale è stata eseguita l'azione
      * @param events lista alla quale aggiungere esito e transizioni
-     * @return true se l’incontro è risolto; false se continua
+     * @return true se l'incontro è risolto; false se continua
      * @throws IllegalStateException se non è possibile avanzare dopo una vittoria non finale
      */
     private boolean resolveEncounter(
@@ -469,9 +477,8 @@ public class GameSession {
             return true;
         }
 
-        // Le armi cambiano solo entrando in un nuovo livello, le pozioni a ogni incontro.
-        int previousLevelIndex =
-                gameState.getCurrentLevelIndex();
+        // Le armi cambiano a ogni livello, le pozioni a ogni incontro.
+        int previousLevelIndex = gameState.getCurrentLevelIndex();
 
         if (!gameState.advanceEncounter()) {
             throw new IllegalStateException(
@@ -479,8 +486,7 @@ public class GameSession {
             );
         }
 
-        if (gameState.getCurrentLevelIndex()
-                != previousLevelIndex) {
+        if (gameState.getCurrentLevelIndex() != previousLevelIndex) {
             prepareCurrentLevel(events);
         }
 
@@ -491,10 +497,10 @@ public class GameSession {
     }
 
     /**
-     * Cerca una pozione utilizzabile oppure un’arma efficace contro un nemico vivo.
+     * Cerca una pozione utilizzabile oppure un'arma efficace contro un nemico vivo.
      *
      * @param hero eroe corrente da valutare
-     * @return true se l’eroe dispone di almeno un’azione
+     * @return true se l'eroe dispone di almeno un'azione
      */
     private boolean hasAvailableAction(Hero hero) {
         for (Item item : hero.getInventory().getItems()) {
@@ -504,8 +510,7 @@ public class GameSession {
             }
 
             if (item instanceof Weapon weapon) {
-                for (Enemy enemy
-                        : gameState.getCurrentEncounter().getEnemies()) {
+                for (Enemy enemy : gameState.getCurrentEncounter().getEnemies()) {
                     if (enemy.isAlive()
                             && weapon.getMultiplierAgainst(enemy) > 0.0) {
                         return true;
@@ -520,19 +525,16 @@ public class GameSession {
     /**
      * Sblocca il gruppo e prepara le armi per il livello corrente.
      *
-     * @param events lista nella quale registrare l’inizio del livello
+     * @param events lista nella quale registrare l'inizio del livello
      * @throws IllegalStateException se il gruppo corrente non è disponibile
      */
     private void prepareCurrentLevel(List<CombatEvent> events) {
-        LevelNumber number =
-                gameState.getCurrentLevel().getNumber();
-
+        LevelNumber number = gameState.getCurrentLevel().getNumber();
         Party party = gameState.getCurrentParty();
 
         if (party == null) {
             throw new IllegalStateException(
-                    "Non è disponibile un gruppo "
-                            + "per il livello corrente."
+                    "Non è disponibile un gruppo per il livello corrente."
             );
         }
 
@@ -550,24 +552,19 @@ public class GameSession {
     /**
      * Assegna una pozione per eroe senza accumulare quelle residue.
      *
-     * @param events lista nella quale registrare l’inizio dell’incontro
+     * @param events lista nella quale registrare l'inizio dell'incontro
      */
-    private void prepareCurrentEncounter(
-            List<CombatEvent> events
-    ) {
+    private void prepareCurrentEncounter(List<CombatEvent> events) {
         Party party = gameState.getCurrentParty();
-
         levelPreparation.prepareEncounter(party);
 
-        int encounterNumber =
-                gameState.getCurrentEncounterIndex() + 1;
+        int encounterNumber = gameState.getCurrentEncounterIndex() + 1;
 
         events.add(
                 new CombatEvent(
                         "Inizio incontro " + encounterNumber
                                 + ": ogni eroe riceve una pozione. "
-                                + "Le pozioni non usate "
-                                + "non si accumulano."
+                                + "Le pozioni non usate non si accumulano."
                 )
         );
     }
