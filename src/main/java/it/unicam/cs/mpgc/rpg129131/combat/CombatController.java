@@ -46,6 +46,19 @@ public class CombatController {
     }
 
     /**
+     * Delega l'esecuzione restituendo anche l'esito necessario alla sessione.
+     *
+     * @param encounter incontro interessato
+     * @param action richiesta dell'eroe
+     * @return esito dell'esecuzione ed eventi prodotti
+     * @throws IllegalArgumentException se richiesta o partecipanti non sono validi
+     * @throws IllegalStateException se il combattimento è terminato
+     */
+    public ActionResult executeHeroActionResult(Encounter encounter, HeroAction action) {
+        return roundManager.executeHeroActionResult(encounter, action);
+    }
+
+    /**
      * Delega l’esecuzione dell’azione di un singolo nemico.
      *
      * @param encounter incontro interessato

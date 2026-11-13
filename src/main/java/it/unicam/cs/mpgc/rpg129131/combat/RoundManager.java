@@ -65,6 +65,20 @@ public class RoundManager {
      * @throws IllegalStateException se l’incontro è terminato
      */
     public List<CombatEvent> executeHeroAction(Encounter encounter, HeroAction action) {
+        return new ArrayList<>(executeHeroActionResult(encounter, action).events());
+    }
+
+    /**
+     * Esegue o rifiuta una richiesta e restituisce separatamente esito ed eventi.
+     * Non modifica il turno: la sessione avanza soltanto se executed è true.
+     *
+     * @param encounter incontro corrente
+     * @param action richiesta da esaminare
+     * @return esito esplicito e messaggi dell'azione
+     * @throws IllegalArgumentException se richiesta o partecipanti non sono validi
+     * @throws IllegalStateException se il combattimento è terminato
+     */
+    public ActionResult executeHeroActionResult(Encounter encounter, HeroAction action) {
         validateEncounter(encounter);
 
         if (action == null) {
@@ -72,6 +86,7 @@ public class RoundManager {
         }
 
         List<CombatEvent> events = new ArrayList<>();
+        boolean executed;
 
         if (action instanceof AttackAction attackAction) {
             validateHero(encounter, attackAction.hero());
@@ -80,15 +95,15 @@ public class RoundManager {
                 throw new IllegalArgumentException("Il bersaglio non appartiene all'incontro.");
             }
 
-            playAttackAction(attackAction, events);
+            executed = playAttackAction(attackAction, events);
         } else if (action instanceof PotionAction potionAction) {
             validateHero(encounter, potionAction.hero());
-            playPotionAction(potionAction, events);
+            executed = playPotionAction(potionAction, events);
         } else {
             throw new IllegalArgumentException("Tipo di azione non supportato.");
         }
 
-        return events;
+        return new ActionResult(executed, events);
     }
 
     /**
@@ -147,8 +162,9 @@ public class RoundManager {
      *
      * @param action richiesta di attacco
      * @param events lista nella quale aggiungere gli eventi
+     * @return true se eseguito, anche con danno zero; false se rifiutato
      */
-    private void playAttackAction(
+    private boolean playAttackAction(
             AttackAction action,
             List<CombatEvent> events
     ) {
@@ -157,12 +173,12 @@ public class RoundManager {
 
         if (!hero.isAlive()) {
             events.add(new CombatEvent(hero.getName() + " è sconfitto e non può attaccare."));
-            return;
+            return false;
         }
 
         if (!target.isAlive()) {
             events.add(new CombatEvent(target.getName() + " è già sconfitto."));
-            return;
+            return false;
         }
 
         try {
@@ -175,8 +191,10 @@ public class RoundManager {
             if (!target.isAlive()) {
                 events.add(new CombatEvent(target.getName() + " è stato sconfitto."));
             }
+            return true;
         } catch (IllegalArgumentException | IllegalStateException e) {
             events.add(new CombatEvent(e.getMessage()));
+            return false;
         }
     }
 
@@ -187,19 +205,20 @@ public class RoundManager {
      *
      * @param action richiesta di cura
      * @param events lista nella quale aggiungere gli eventi
+     * @return true se la cura è riuscita; false se rifiutata
      */
-    private void playPotionAction(PotionAction action, List<CombatEvent> events) {
+    private boolean playPotionAction(PotionAction action, List<CombatEvent> events) {
         Hero hero = action.hero();
         Potion potion = action.potion();
 
         if (!hero.isAlive()) {
             events.add(new CombatEvent(hero.getName() + " è sconfitto e non può usare la pozione."));
-            return;
+            return false;
         }
 
         if (!hero.getInventory().contains(potion)) {
             events.add(new CombatEvent(hero.getName() + " non possiede questa pozione."));
-            return;
+            return false;
         }
 
         int healthBefore = hero.getHealth();
@@ -212,8 +231,10 @@ public class RoundManager {
             events.add(new CombatEvent(
                     hero.getName() + " usa una pozione e recupera " + (hero.getHealth() - healthBefore)
                             + " punti vita. HP: " + hero.getHealth() + "/" + hero.getMaxHealth()));
+            return true;
         } catch (IllegalArgumentException | IllegalStateException e) {
             events.add(new CombatEvent(e.getMessage()));
+            return false;
         }
     }
 

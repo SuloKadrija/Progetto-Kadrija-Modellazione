@@ -1,5 +1,6 @@
 package it.unicam.cs.mpgc.rpg129131.game;
 
+import it.unicam.cs.mpgc.rpg129131.combat.ActionResult;
 import it.unicam.cs.mpgc.rpg129131.combat.CombatController;
 import it.unicam.cs.mpgc.rpg129131.combat.CombatEvent;
 import it.unicam.cs.mpgc.rpg129131.combat.HeroAction;
@@ -111,8 +112,8 @@ public class GameSession {
     /**
      * Verifica che la richiesta appartenga all'eroe corrente e la esegue.
      * Controlla subito la fine dell'incontro; se continua, passa al prossimo eroe.
-     * Il turno avanza anche quando il controllore restituisce un evento
-     * di rifiuto invece di sollevare un'eccezione.
+     * Una richiesta rifiutata restituisce i messaggi senza cambiare turno.
+     * Un attacco eseguito consuma il turno anche se infligge zero danni.
      *
      * @param action azione richiesta dall'eroe corrente
      * @return eventi dell'azione e delle eventuali transizioni
@@ -146,9 +147,14 @@ public class GameSession {
 
         Encounter encounter = gameState.getCurrentEncounter();
 
-        List<CombatEvent> events = new ArrayList<>(
-                combatController.executeHeroAction(encounter, action)
-        );
+        ActionResult result =
+                combatController.executeHeroActionResult(encounter, action);
+
+        List<CombatEvent> events = new ArrayList<>(result.events());
+
+        if (!result.executed()) {
+            return events;
+        }
 
         if (resolveEncounter(encounter, events)) {
             return events;
