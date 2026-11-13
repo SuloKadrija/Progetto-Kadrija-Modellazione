@@ -2,43 +2,44 @@ package it.unicam.cs.mpgc.rpg129131.model.item;
 
 import it.unicam.cs.mpgc.rpg129131.model.enemy.EnemyType;
 
+import java.util.EnumMap;
 import java.util.Map;
 
 /**
- * Passi della Bibbia, utilizzabili come arma contro Dio.
- * La mappa assegna efficacia zero a tutte le altre categorie attuali.
- * La classe configura i moltiplicatori; il danno effettivo è calcolato
- * da CombatService usando anche attacco dell’eroe e difesa del nemico.
+ * Rappresenta i Passi della Bibbia, efficaci esclusivamente contro Dio.
+ * Configura efficacia zero per tutte le altre categorie, comprese
+ * quelle eventualmente aggiunte in futuro a EnemyType.
+ * Il calcolo e l'applicazione del danno spettano al servizio di combattimento.
  */
 public class Quote extends Weapon {
 
     /**
-     * Inizializza nome, moltiplicatore base e mappa di efficacia dell’arma.
-     * Per le categorie non presenti nella mappa, Weapon restituisce efficacia 1.0.
+     * Crea l'arma con moltiplicatore base 1.2 ed efficacia 2.0 contro Dio.
      */
     public Quote() {
-        // Ordine dei parametri: nome, moltiplicatore base, efficacia per tipo di nemico.
-        super("Passi della Bibbia", 1.2,
-                Map.of(
-                        // Nessun effetto contro fantasmi.
-                        EnemyType.GHOST, 0.0,
-                        // Nessun effetto contro vampiri.
-                        EnemyType.VAMPIRE, 0.0,
-                        // Nessun effetto contro wendigo.
-                        EnemyType.WENDIGO, 0.0,
-                        // Nessun effetto contro demoni.
-                        EnemyType.DEMON, 0.0,
-                        // Nessun effetto contro demoni dagli occhi gialli.
-                        EnemyType.YELLOW_EYED_DEMON, 0.0,
-                        // Nessun effetto contro Lucifero.
-                        EnemyType.LUCIFER, 0.0,
-                        // Nessun effetto contro leviatani.
-                        EnemyType.LEVIATHAN, 0.0,
-                        // Nessun effetto contro angeli.
-                        EnemyType.ANGEL, 0.0,
-                        // Efficacia contro Dio.
-                        EnemyType.GOD, 2.0
-                )
+        super(
+                "Passi della Bibbia",
+                1.2,
+                createEffectiveness()
         );
+    }
+
+    /**
+     * Costruisce la mappa includendo ogni categoria definita nell'enumerazione.
+     * Evita che nuove categorie ereditino l'efficacia predefinita di Weapon.
+     *
+     * @return efficacia zero per ogni categoria diversa da GOD
+     */
+    private static Map<EnemyType, Double> createEffectiveness() {
+        Map<EnemyType, Double> effectiveness =
+                new EnumMap<>(EnemyType.class);
+
+        for (EnemyType type : EnemyType.values()) {
+            effectiveness.put(type, 0.0);
+        }
+
+        effectiveness.put(EnemyType.GOD, 2.0);
+
+        return effectiveness;
     }
 }
