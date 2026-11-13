@@ -3,22 +3,38 @@ package it.unicam.cs.mpgc.rpg129131.game;
 import it.unicam.cs.mpgc.rpg129131.model.Inventory;
 import it.unicam.cs.mpgc.rpg129131.model.LevelNumber;
 import it.unicam.cs.mpgc.rpg129131.model.Party;
-import it.unicam.cs.mpgc.rpg129131.model.item.*;
 import it.unicam.cs.mpgc.rpg129131.model.hero.Hero;
+import it.unicam.cs.mpgc.rpg129131.model.item.AngelicArrow;
+import it.unicam.cs.mpgc.rpg129131.model.item.AngelicKnife;
+import it.unicam.cs.mpgc.rpg129131.model.item.AngelicSword;
+import it.unicam.cs.mpgc.rpg129131.model.item.DemoniacArrow;
+import it.unicam.cs.mpgc.rpg129131.model.item.DemoniacKnife;
+import it.unicam.cs.mpgc.rpg129131.model.item.FireWeapon;
+import it.unicam.cs.mpgc.rpg129131.model.item.HolyWater;
+import it.unicam.cs.mpgc.rpg129131.model.item.Item;
+import it.unicam.cs.mpgc.rpg129131.model.item.Knife;
+import it.unicam.cs.mpgc.rpg129131.model.item.Potion;
+import it.unicam.cs.mpgc.rpg129131.model.item.Quote;
+import it.unicam.cs.mpgc.rpg129131.model.item.Rifle;
+import it.unicam.cs.mpgc.rpg129131.model.item.Salt;
+import it.unicam.cs.mpgc.rpg129131.model.item.Weapon;
+import it.unicam.cs.mpgc.rpg129131.model.item.WoodenStake;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Prepara sblocchi e dotazioni all’inizio di un livello e le pozioni
- * all’inizio di ciascun incontro. Non gestisce turni, danni o persistenza.
- * Il caricamento di un salvataggio non deve ripetere questa preparazione.
+ * Prepara sblocchi e dotazioni all'inizio di un livello e assegna
+ * le pozioni all'inizio di ciascun incontro.
+ * Non gestisce turni, danni o persistenza.
+ * Il caricamento di una partita non deve ripetere questa preparazione.
  */
 public class LevelPreparation {
 
     /**
      * Sblocca gli eroi del gruppo e sostituisce gli inventari con le armi del livello.
-     * Non assegna le pozioni: queste sono preparate separatamente per ogni incontro.
+     * Crea una dotazione distinta per ciascun eroe.
+     * Le pozioni vengono assegnate separatamente all'inizio dell'incontro.
      *
      * @param number livello del quale preparare le dotazioni
      * @param party gruppo che entra nel livello
@@ -32,16 +48,16 @@ public class LevelPreparation {
         }
 
         for (Hero hero : party.getMembers()) {
-            hero.unlock();
             replaceInventory(hero, number);
+            hero.unlock();
         }
     }
 
     /**
-     * Rimuove tutte le pozioni residue e ne assegna una nuova a ciascun eroe.
-     * Le armi restano invariate; le pozioni non usate non si accumulano.
+     * Sostituisce tutte le pozioni residue con una nuova pozione per eroe.
+     * Conserva gli altri oggetti, mantenendone ordine e identità.
      *
-     * @param party gruppo che entra nell’incontro
+     * @param party gruppo che entra nell'incontro
      * @throws IllegalArgumentException se il gruppo è null
      */
     public void prepareEncounter(Party party) {
@@ -53,85 +69,62 @@ public class LevelPreparation {
 
         for (Hero hero : party.getMembers()) {
             Inventory inventory = hero.getInventory();
+            List<Item> preparedItems = new ArrayList<>();
 
-            // Itera su una copia per poter rimuovere elementi dall’inventario originale.
-            List<Item> previousItems =
-                    new ArrayList<>(inventory.getItems());
-
-            for (Item item : previousItems) {
-                if (item instanceof Potion) {
-                    inventory.removeItem(item);
+            for (Item item : inventory.getItems()) {
+                if (!(item instanceof Potion)) {
+                    preparedItems.add(item);
                 }
             }
 
-            inventory.addItem(new Potion());
+            preparedItems.add(new Potion());
+            inventory.restoreItems(preparedItems);
         }
     }
 
     /**
-     * Svuota l’inventario e aggiunge nuove istanze delle armi previste per il livello.
+     * Sostituisce l'inventario con nuove istanze delle armi previste.
+     * Costruisce la dotazione prima di modificare l'inventario dell'eroe.
      *
      * @param hero eroe da equipaggiare
      * @param number livello che determina la dotazione
      */
-    private void replaceInventory(
-            Hero hero,
-            LevelNumber number
-    ) {
-        Inventory inventory = hero.getInventory();
-
-        List<Item> previousItems =
-                new ArrayList<>(inventory.getItems());
-
-        for (Item item : previousItems) {
-            inventory.removeItem(item);
-        }
-
-        for (Weapon weapon : createWeapons(number)) {
-            inventory.addItem(weapon);
-        }
+    private void replaceInventory(Hero hero, LevelNumber number) {
+        List<Item> preparedItems = new ArrayList<>(createWeapons(number));
+        hero.getInventory().restoreItems(preparedItems);
     }
 
     /**
      * Costruisce una nuova dotazione di armi per il livello indicato.
-     * Ogni chiamata crea oggetti distinti per evitare di condividere la dotazione.
+     * Ogni chiamata crea oggetti distinti, evitando la condivisione
+     * della dotazione fra eroi.
      *
      * @param number livello richiesto
-     * @return lista delle armi previste
-     * @throws IllegalArgumentException se non è definita una dotazione
+     * @return armi previste per il livello
      */
     private List<Weapon> createWeapons(LevelNumber number) {
-        switch (number) {
-            case ONE:
-                return List.of(
-                        new Knife(),
-                        new Rifle(),
-                        new WoodenStake(),
-                        new Salt(),
-                        new FireWeapon()
-                );
+        return switch (number) {
+            case ONE -> List.of(
+                    new Knife(),
+                    new Rifle(),
+                    new WoodenStake(),
+                    new Salt(),
+                    new FireWeapon()
+            );
 
-            case TWO:
-                return List.of(
-                        new HolyWater(),
-                        new DemoniacKnife(),
-                        new DemoniacArrow(),
-                        new AngelicSword()
-                );
+            case TWO -> List.of(
+                    new HolyWater(),
+                    new DemoniacKnife(),
+                    new DemoniacArrow(),
+                    new AngelicSword()
+            );
 
-            case THREE:
-                return List.of(
-                        new AngelicSword(),
-                        new AngelicArrow(),
-                        new AngelicKnife(),
-                        new Quote()
-                );
-
-            default:
-                throw new IllegalArgumentException(
-                        "Dotazione non definita per il livello "
-                                + number
-                );
-        }
+            case THREE -> List.of(
+                    new AngelicSword(),
+                    new AngelicArrow(),
+                    new AngelicKnife(),
+                    new Quote()
+            );
+        };
     }
 }
