@@ -33,20 +33,18 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import it.unicam.cs.mpgc.rpg129131.game.GameSessionFactory;
+import it.unicam.cs.mpgc.rpg129131.persistence.GamePersistence;
 
 /**
  * Implementa l’interfaccia JavaFX e collega i comandi del giocatore alla sessione.
  * Gestisce schermate, finestre di dialogo e ritardo fra gli attacchi nemici.
- * Delega regole e avanzamento a GameSession e persistenza a GameSaveService.
+ * Delega regole e avanzamento a GameSession e persistenza al contratto GamePersistence.
  * Le operazioni sui file sono eseguite sincronicamente dai gestori JavaFX.
  */
 public class GameApplication extends Application {
 
-    /**
-     * Servizio per leggere e scrivere la partita sul disco.
-     */
-    private final GameSaveService saveService =
-            new GameSaveService();
+    /** Contratto di persistenza usato dai comandi di salvataggio e caricamento. */
+    private final GamePersistence saveService;
 
 
     /** Criteri condivisi per individuare bersagli e oggetti disponibili. */
@@ -115,6 +113,32 @@ public class GameApplication extends Application {
      * Comando di salvataggio abilitato durante una partita attiva.
      */
     private Button saveButton;
+
+    /**
+     * Configura la persistenza JSON predefinita.
+     * Il costruttore pubblico senza argomenti permette l'avvio tramite JavaFX.
+     */
+    public GameApplication() {
+        this(new GameSaveService());
+    }
+
+    /**
+     * Configura l'applicazione con il servizio di persistenza fornito.
+     * Consente di sostituire l'implementazione senza modificare
+     * i gestori dei comandi di salvataggio e caricamento.
+     *
+     * @param saveService implementazione della persistenza
+     * @throws IllegalArgumentException se il servizio è null
+     */
+    public GameApplication(GamePersistence saveService) {
+        if (saveService == null) {
+            throw new IllegalArgumentException(
+                    "Il servizio di persistenza non può essere null."
+            );
+        }
+
+        this.saveService = saveService;
+    }
 
     /**
      * Crea la finestra principale, registra i gestori degli eventi e mostra il menu.

@@ -16,6 +16,7 @@ import it.unicam.cs.mpgc.rpg129131.persistence.GameSaveMapper;
 import it.unicam.cs.mpgc.rpg129131.persistence.GameSaveService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import it.unicam.cs.mpgc.rpg129131.persistence.GamePersistence;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -36,11 +37,8 @@ class GameSaveServiceTest {
     @TempDir
     Path directory;
 
-    /**
-     * Servizio di salvataggio sottoposto a verifica.
-     */
-    private final GameSaveService service =
-            new GameSaveService();
+    /** Implementazione JSON verificata attraverso il contratto di persistenza. */
+    private final GamePersistence service = new GameSaveService();
 
     /**
      * Convertitore usato per confrontare i dati prima e dopo il ripristino.

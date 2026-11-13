@@ -21,7 +21,7 @@ import java.nio.file.StandardCopyOption;
  * tenta uno spostamento atomico e, se non supportato, uno normale.
  * Non mostra finestre e non sostituisce la sessione dell’interfaccia.
  */
-public class GameSaveService {
+public class GameSaveService implements GamePersistence {
 
     /**
      * Converte e valida lo stato del gioco, senza occuparsi dei file.
@@ -49,6 +49,7 @@ public class GameSaveService {
      * @throws IllegalArgumentException se il percorso è null
      * @throws IOException se lo stato non è salvabile o un’operazione sui file fallisce
      */
+    @Override
     public void save(Path file, GameSession session)
             throws IOException {
 
@@ -123,6 +124,7 @@ public class GameSaveService {
      * @throws IllegalArgumentException se il percorso è null
      * @throws IOException se lettura, sintassi JSON o dati della partita non sono validi
      */
+    @Override
     public GameSession load(Path file) throws IOException {
         if (file == null) {
             throw new IllegalArgumentException(
