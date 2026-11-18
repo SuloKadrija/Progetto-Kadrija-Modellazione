@@ -102,13 +102,20 @@ Le principali aree del progetto sono:
 - `persistence`: salvataggio e caricamento delle partite in formato JSON.
 - `ui`: interfaccia grafica JavaFX e vista console.
 
-## Uso di strumenti di AI
+## Dichiarazione sull’utilizzo dell’intelligenza artificiale
 
-l’AI è stata utilizzata per:
+Durante lo sviluppo del progetto sono stati utilizzati strumenti di intelligenza artificiale come supporto allo studio, al debugging e alla documentazione.
+
+In particolare, l’AI è stata utilizzata per:
 
 - Chiarire errori di compilazione e messaggi degli strumenti di sviluppo.
 - Comprendere concetti relativi a Java, Gradle, Git, JavaFX e test automatici.
-- Attività di debugging spiegata passo passo per farmi comprendere gli errori commessi.
-- Generare le classi test, successivamente riviste, adattate e verificate manualmente.
-- Generare i commenti all’interno del codice già scritto da me, successivamente rivisti, adattati e verificati manualmente.
+- Supportare attività di debugging, spiegando passo per passo gli errori individuati.
+- Generare una prima versione di alcune classi di test, successivamente riviste, adattate e verificate manualmente.
+- Generare commenti all’interno del codice già scritto, successivamente rivisti, adattati e verificati manualmente.
+- Redigere il file `README.md` e le pagine della wiki sulla base di prompt forniti dallo sviluppatore, con revisione, adattamento e verifica finale.
+
+L’AI non è stata utilizzata per sostituire la comprensione del progetto, le decisioni di sviluppo, la scrittura e la modifica del codice, l’esecuzione delle verifiche o la validazione finale del funzionamento dell’applicazione.
+
+Ogni contenuto generato con il supporto dell’AI è stato esaminato, corretto quando necessario e verificato prima di essere incluso nel progetto.
 
