@@ -105,7 +105,7 @@ Le principali aree del progetto sono:
 ## Dichiarazione sull’utilizzo dell’intelligenza artificiale
 
 Durante lo sviluppo del progetto sono stati utilizzati strumenti di intelligenza artificiale come supporto allo studio, al debugging e alla documentazione.
-
+IA utilizzata: Perplexity
 In particolare, l’AI è stata utilizzata per:
 
 - Chiarire errori di compilazione e messaggi degli strumenti di sviluppo.
